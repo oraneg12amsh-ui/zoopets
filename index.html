@@ -50,10 +50,6 @@
         
         /* Loader */
         #loader { position: fixed; inset: 0; background: #fff7ed; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
-
-        /* Offline Badge */
-        .offline-badge { position: fixed; bottom: 20px; left: 20px; background-color: #dc2626; color: white; padding: 10px 20px; border-radius: 50px; font-size: 13px; font-weight: bold; z-index: 9998; box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.3); display: none; animation: slideUp 0.5s ease; border: 2px solid white; }
-        .offline-badge.visible { display: flex; align-items: center; gap: 8px; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen text-gray-800">
@@ -65,13 +61,7 @@
             <div class="absolute inset-0 flex items-center justify-center text-2xl">🦊</div>
         </div>
         <h2 class="text-3xl font-extrabold text-gray-900 tracking-widest mb-2">ZOOTPETS</h2>
-        <p class="text-orange-600 font-medium animate-pulse">Cargando experiencia...</p>
-    </div>
-
-    <!-- Badge Offline -->
-    <div id="offline-badge" class="offline-badge">
-        <i class="fas fa-wifi-slash"></i> 
-        <span>MODO OFFLINE (Datos Locales)</span>
+        <p class="text-orange-600 font-medium animate-pulse">Conectando a la nube...</p>
     </div>
 
     <!-- Header -->
@@ -494,46 +484,28 @@
         let app, auth, db, analytics;
         const appId = 'zoopets-production';
         
-        // State Management
+        // State Management (Only client-side cart persistence remains)
         let cart = JSON.parse(localStorage.getItem('zootpetsCart')) || [];
         let currentFilter = 'todos';
         let isAdminLoggedIn = localStorage.getItem('isAdmin') === 'true';
-        let isOffline = false;
+        
+        // Data containers
         let products = [];
         let orders = [];
         let appointments = [];
 
-        // Data Persistence
-        const saveLocal = () => {
-            localStorage.setItem('zootData_products', JSON.stringify(products));
-            localStorage.setItem('zootData_orders', JSON.stringify(orders));
-            localStorage.setItem('zootData_appts', JSON.stringify(appointments));
-        };
-
-        const loadLocal = () => {
-            products = JSON.parse(localStorage.getItem('zootData_products') || '[]');
-            orders = JSON.parse(localStorage.getItem('zootData_orders') || '[]');
-            appointments = JSON.parse(localStorage.getItem('zootData_appts') || '[]');
-        };
-
-        const toggleOfflineMode = (status) => {
-            isOffline = status;
-            const badge = document.getElementById('offline-badge');
-            if(status) badge.classList.add('visible');
-            else badge.classList.remove('visible');
-        };
-
-        // --- BOOTSTRAP APP ---
+        // --- BOOTSTRAP APP (CLOUD ONLY) ---
         try {
             app = initializeApp(firebaseConfig);
-            analytics = getAnalytics(app); // Analytics inicializado aquí
+            analytics = getAnalytics(app);
             auth = getAuth(app);
             db = getFirestore(app);
             
             signInAnonymously(auth).then(() => {
                 console.log("🔥 Firebase Conectado");
             }).catch(err => {
-                throw err; // Trigger offline mode
+                console.error("Error de Auth:", err);
+                window.showNotification("Error conectando a la nube", "error");
             });
 
             onAuthStateChanged(auth, user => {
@@ -541,11 +513,8 @@
             });
 
         } catch (e) {
-            console.warn("⚠️ Modo Offline Activado:", e);
-            toggleOfflineMode(true);
-            loadLocal();
-            if(products.length === 0) seedLocalData(); // Demo data
-            initUI();
+            console.error("Error crítico:", e);
+            alert("No se pudo conectar al servidor.");
         }
 
         function setupRealtimeListeners() {
@@ -557,31 +526,20 @@
 
             onSnapshot(refs.products, sn => {
                 products = sn.docs.map(d => ({id:d.id, ...d.data()}));
-                saveLocal();
                 window.renderProducts();
                 if(isAdminLoggedIn) window.renderAdminProducts();
                 removeLoader();
-            }, err => handleOfflineError(err));
+            }, err => console.error("Error Products Stream:", err));
 
             onSnapshot(refs.orders, sn => {
                 orders = sn.docs.map(d => ({id:d.id, ...d.data()}));
-                saveLocal();
                 if(isAdminLoggedIn) window.renderAdminOrders();
-            }, err => console.warn("Orders offline"));
+            }, err => console.error("Error Orders Stream:", err));
 
             onSnapshot(refs.appts, sn => {
                 appointments = sn.docs.map(d => ({id:d.id, ...d.data()}));
-                saveLocal();
                 if(isAdminLoggedIn) window.renderAdminAppointments();
-            }, err => console.warn("Appts offline"));
-        }
-
-        function handleOfflineError(err) {
-            console.log("Connection lost, switching to local");
-            toggleOfflineMode(true);
-            loadLocal();
-            if(products.length === 0) seedLocalData();
-            initUI();
+            }, err => console.error("Error Appointments Stream:", err));
         }
 
         function removeLoader() {
@@ -596,82 +554,67 @@
             removeLoader();
         }
 
-        // --- ACTIONS (CRUD) ---
+        // --- ACTIONS (CLOUD ONLY) ---
         window.addProductToDB = async (data) => {
-            if(isOffline) {
-                products.push({id: `loc_${Date.now()}`, ...data});
-                saveLocal(); refreshUI();
-                window.showNotification("Guardado localmente", "warning");
-                return;
+            try { 
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), data); 
+                window.showNotification("Producto guardado en la nube"); 
+            } catch(e) { 
+                console.error(e); 
+                window.showNotification("Error al guardar", "error"); 
             }
-            try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), data); window.showNotification("Producto agregado"); }
-            catch(e) { window.addProductToDB(data); } // Retry local
         };
 
         window.updateProductInDB = async (id, data) => {
-            if(isOffline || id.startsWith('loc_')) {
-                const idx = products.findIndex(p=>p.id===id);
-                if(idx>=0) { products[idx] = {...products[idx], ...data}; saveLocal(); refreshUI(); }
-                return;
+            try { 
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id), data); 
+                window.showNotification("Producto actualizado"); 
+            } catch(e) { 
+                console.error(e); 
+                window.showNotification("Error al actualizar", "error"); 
             }
-            try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id), data); window.showNotification("Producto actualizado"); }
-            catch(e) { toggleOfflineMode(true); window.updateProductInDB(id, data); }
         };
 
         window.deleteProductFromDB = async (id) => {
-            if(!confirm("¿Eliminar este producto permanentemente?")) return;
-            if(isOffline || id.startsWith('loc_')) {
-                products = products.filter(p=>p.id!==id);
-                saveLocal(); refreshUI();
-                window.showNotification("Producto eliminado", "info");
-                return;
+            if(!confirm("¿Eliminar de la nube permanentemente?")) return;
+            try { 
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); 
+                window.showNotification("Producto eliminado", "info"); 
+            } catch(e) { 
+                console.error(e); 
+                window.showNotification("Error al eliminar", "error"); 
             }
-            try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id)); window.showNotification("Producto eliminado", "info"); }
-            catch(e) { toggleOfflineMode(true); window.deleteProductFromDB(id); }
         };
 
         window.addOrderToDB = async (data) => {
-            if(isOffline) {
-                orders.push({id:`ord_${Date.now()}`, ...data});
-                saveLocal();
-                if(isAdminLoggedIn) window.renderAdminOrders();
-            } else {
-                try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'), data); }
-                catch(e) { isOffline=true; window.addOrderToDB(data); }
+            try { 
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'), data); 
+            } catch(e) { 
+                console.error(e); 
+                alert("Error de conexión al procesar pedido"); 
             }
         };
         
         window.addAppointmentToDB = async (data) => {
-             if(isOffline) {
-                 appointments.push({id:`apt_${Date.now()}`, ...data});
-                 saveLocal();
-                 if(isAdminLoggedIn) window.renderAdminAppointments();
-             } else {
-                 try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'), data); }
-                 catch(e) { isOffline=true; window.addAppointmentToDB(data); }
+             try { 
+                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'), data); 
+             } catch(e) { 
+                 console.error(e); 
+                 alert("Error al agendar cita en la nube"); 
              }
         };
 
-        // Update Helper
         window.updateOrderInDB = async (id, status) => {
-            if(isOffline || id.startsWith('ord_')) {
-                const o = orders.find(x=>x.id===id); if(o) o.status=status; saveLocal(); if(isAdminLoggedIn) window.renderAdminOrders();
-            } else { try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', id), {status}); } catch(e){} }
+            try { 
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', id), {status}); 
+            } catch(e){ console.error(e); }
         };
         
-        // Delete Helper (Genericish)
         window.deleteGeneric = async (col, id) => {
-             if(isOffline || id.startsWith('loc_') || id.startsWith('ord_') || id.startsWith('apt_')) {
-                 if(col === 'orders') orders = orders.filter(x=>x.id!==id);
-                 if(col === 'appointments') appointments = appointments.filter(x=>x.id!==id);
-                 saveLocal(); refreshUI();
-             } else { try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id)); } catch(e){} }
+             try { 
+                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id)); 
+             } catch(e){ console.error(e); }
         };
-
-        function refreshUI() {
-            window.renderProducts();
-            if(isAdminLoggedIn) { window.renderAdminProducts(); window.renderAdminOrders(); window.renderAdminAppointments(); }
-        }
 
         // --- UI RENDERERS ---
         window.renderProducts = () => {
@@ -734,7 +677,6 @@
             window.renderCart(); 
             window.showNotification(`${prod.name} añadido`);
             
-            // Animation bump
             const icon = document.getElementById('cart-icon');
             icon.classList.remove('text-gray-700');
             icon.classList.add('text-orange-600', 'animate-bounce-short');
@@ -853,15 +795,12 @@
                 
                 await window.addOrderToDB(order);
                 
-                // Send WhatsApp
                 let msg = `🐶 *NUEVO PEDIDO ZOOTPETS* 🐱\n\n🆔 ID: ${order.orderId}\n👤 Cliente: ${order.customer}\n📞 Tel: ${order.phone}\n📍 Dirección: ${order.address}\n💰 Total: $${order.total}\n\n📝 *Detalle:*\n${order.items.map(i => `- ${i.name} x${i.quantity}`).join('\n')}`;
                 const waURL = `https://wa.me/5212452070033?text=${encodeURIComponent(msg)}`;
                 
-                // Success Flow
                 document.getElementById('checkout-modal').classList.remove('show');
                 cart = []; saveCart(); window.renderCart(); window.toggleCart();
                 
-                // Nice alert
                 const confirmed = confirm(`¡Pedido Recibido!\n\nTu ID de rastreo es: ${order.orderId}\n\n¿Deseas enviar el detalle por WhatsApp al veterinario?`);
                 if(confirmed) window.open(waURL, '_blank');
                 
@@ -896,7 +835,6 @@
                          </div>
                     </div>
                     
-                    <!-- Progress Bar Visualization -->
                     <div class="flex justify-between mb-2 px-2">
                         ${steps.map((s, i) => `<div class="text-xs font-bold ${i <= currentIdx ? 'text-orange-600' : 'text-gray-300'}">${s}</div>`).join('')}
                     </div>
@@ -958,7 +896,6 @@
         // --- ADMIN ---
         document.getElementById('admin-login-form').addEventListener('submit', e => {
             e.preventDefault();
-            // Simple hardcoded auth for demo (user's request)
             if(document.getElementById('admin-username').value === 'admin' && document.getElementById('admin-password').value === 'password123') {
                 isAdminLoggedIn = true; 
                 localStorage.setItem('isAdmin', 'true'); 
@@ -978,7 +915,6 @@
             document.getElementById('admin-login').classList.add('hidden'); 
             document.getElementById('admin-panel').classList.remove('hidden');
             
-            // Render stats
             const totalSales = orders.reduce((acc, o) => acc + Number(o.total), 0);
             document.getElementById('admin-stats').innerHTML = `
                 <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700">
@@ -998,7 +934,6 @@
             window.renderAdminProducts();
         };
 
-        // Admin Tabs Logic
         window.showAdminTab = (tab, btn) => {
             document.querySelectorAll('.admin-content').forEach(e => e.classList.add('hidden'));
             document.getElementById(`admin-${tab}`).classList.remove('hidden');
@@ -1018,7 +953,6 @@
         window.renderAdminProducts = () => {
             document.getElementById('admin-productos').innerHTML = `
             <div class="grid lg:grid-cols-3 gap-8">
-                <!-- Form Create -->
                 <div class="lg:col-span-1">
                     <div class="bg-gray-50 p-6 rounded-2xl border border-gray-200 sticky top-4">
                         <h4 class="font-bold text-xl mb-4 text-gray-800 flex items-center gap-2"><i class="fas fa-plus-circle text-orange-600"></i> Agregar Producto</h4>
@@ -1043,7 +977,6 @@
                     </div>
                 </div>
                 
-                <!-- List -->
                 <div class="lg:col-span-2 space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scroll">
                     ${products.map(p => `
                         <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
@@ -1059,11 +992,10 @@
                                 <button onclick="window.deleteProductFromDB('${p.id}')" class="w-10 h-10 rounded-xl bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"><i class="fas fa-trash"></i></button>
                             </div>
                         </div>`).join('')}
-                    ${products.length === 0 ? '<div class="text-center py-10 text-gray-400">No hay productos en el inventario.</div>' : ''}
+                    ${products.length === 0 ? '<div class="text-center py-10 text-gray-400">No hay productos en el inventario de la nube.</div>' : ''}
                 </div>
             </div>`;
             
-            // Bind Form
             const form = document.getElementById('add-prod-form');
             if(form) form.addEventListener('submit', async e => {
                 e.preventDefault();
@@ -1189,7 +1121,6 @@
         window.toggleMobileMenu = () => document.getElementById('mobile-menu').classList.toggle('hidden');
         window.mobileNav = (id) => { window.scrollToSection(id); window.toggleMobileMenu(); };
 
-        // Image Logic (Keep small)
         const processImage = (file) => new Promise(resolve => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -1207,17 +1138,10 @@
             };
         });
 
-        // Default Data (Demo)
-        const seedLocalData = () => {
-            products = [
-                {id:"1",name:"Alimento Premium Zoot",price:550,category:"alimento",image:"https://images.unsplash.com/photo-1585559700398-1385b3a8aeb6?auto=format&fit=crop&w=400&q=80",description:"Nutrición balanceada para adultos."},
-                {id:"2",name:"Pelota K9 Resistente",price:120,category:"juguetes",image:"https://images.unsplash.com/photo-1546422401-68b415cbf8de?auto=format&fit=crop&w=400&q=80",description:"Indestructible para mordidas fuertes."},
-                {id:"3",name:"Vitaminas Complex",price:280,category:"medicamentos",image:"https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=400&q=80",description:"Suplemento diario."},
-                {id:"4",name:"Correa Táctica",price:310,category:"accesorios",image:"https://images.unsplash.com/photo-1576201836106-db1758fd1c97?auto=format&fit=crop&w=400&q=80",description:"Control total y seguridad."},
-                {id:"5",name:"Cama Ortopédica",price:850,category:"accesorios",image:"https://images.unsplash.com/photo-1591946614720-90a587da4a36?auto=format&fit=crop&w=400&q=80",description:"Descanso perfecto."}
-            ];
-            saveLocal();
-        };
+        // Initial render
+        window.renderProducts();
+        window.renderCart();
+        window.renderAdminPanel();
     </script>
 </body>
 </html>
