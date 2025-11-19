@@ -26,6 +26,10 @@
         
         /* Loader Personalizado */
         #loader { position: fixed; inset: 0; background: white; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
+
+        /* Demo Badge */
+        .demo-badge { position: fixed; bottom: 20px; left: 20px; background-color: #374151; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold; z-index: 9998; box-shadow: 0 4px 6px rgba(0,0,0,0.2); display: none; }
+        .demo-badge.visible { display: block; animation: fadeIn 0.5s ease; }
     </style>
 </head>
 <body class="bg-orange-50 flex flex-col min-h-screen">
@@ -36,6 +40,9 @@
         <h2 class="text-2xl font-extrabold text-gray-800 tracking-widest">ZOOTPETS</h2>
         <p class="text-orange-500 text-sm font-medium">Cargando el mundo de tu mascota...</p>
     </div>
+
+    <!-- Demo Badge Indicator -->
+    <div id="demo-badge" class="demo-badge">📡 MODO DEMO (OFFLINE)</div>
 
     <!-- Header -->
     <header class="gradient-bg text-white shadow-xl sticky top-0 z-40 bg-opacity-95 backdrop-blur">
@@ -299,11 +306,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
-
         // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
         const firebaseConfig = {
           apiKey: "AIzaSyAR3LsumI0TL0BgzckHV4CYc_VoxMH00rs",
           authDomain: "zoopets-31dec.firebaseapp.com",
@@ -316,7 +319,7 @@
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app); // Analytics inicializado
+        const analytics = getAnalytics(app); 
         const auth = getAuth(app);
         const db = getFirestore(app);
         
@@ -350,38 +353,60 @@
             if(a) appointments = JSON.parse(a);
         };
 
+        // Toggle Offline Badge
+        const toggleOfflineUI = (offline) => {
+            const badge = document.getElementById('demo-badge');
+            if (offline) badge.classList.add('visible');
+            else badge.classList.remove('visible');
+        };
+        
+        // --- DEFINIR NOTIFICACIONES GLOBALMENTE ---
+        window.showNotification = (msg, type) => {
+            const div = document.createElement('div'); 
+            div.className = `fixed top-24 right-6 px-6 py-4 rounded-xl shadow-2xl text-white font-bold z-[2000] animate-[slideUp_0.3s_ease] flex items-center gap-3 ${type === 'error' ? 'bg-red-500' : (type === 'info' ? 'bg-blue-600' : (type === 'warning' ? 'bg-yellow-600' : 'bg-gray-900'))}`; 
+            div.innerHTML = type === 'error' ? `<span>⚠️</span> ${msg}` : `<span>✅</span> ${msg}`;
+            document.body.appendChild(div); 
+            setTimeout(() => div.remove(), 3000);
+        };
+
         // --- AUTH & INIT ---
         const initAuth = async () => {
             try {
                 await signInAnonymously(auth);
                 console.log("ZOOTPETS Cloud: Conectado 🟢");
             } catch (error) {
-                console.warn("Firebase Auth falló, cambiando a modo local 🟠", error);
-                isOffline = true;
+                console.warn("Firebase Auth falló:", error);
                 
-                // Eliminar loader manualmente porque Auth falló
+                let errorMsg = "Error de conexión";
+                if (error.code === 'auth/configuration-not-found') errorMsg = "❌ Activa 'Anónimo' en Firebase Auth";
+                else if (error.code === 'auth/unauthorized-domain') errorMsg = "❌ Autoriza este dominio en Firebase";
+                else if (error.code === 'auth/api-key-not-valid') errorMsg = "❌ API Key incorrecta";
+                else errorMsg = `❌ Error: ${error.code}`;
+
                 const loader = document.getElementById('loader');
                 if(loader) {
-                    loader.innerHTML = `<div class="text-center px-4"><h2 class="text-2xl font-bold text-gray-800 mb-2">Modo Local</h2><p class="text-orange-600 mb-4 font-medium">Conectando sin nube...</p></div>`;
-                    setTimeout(() => loader.remove(), 1500);
+                    loader.innerHTML = `
+                        <div class="text-center px-6 max-w-md">
+                            <h2 class="text-2xl font-bold text-red-600 mb-2">Conexión Fallida</h2>
+                            <p class="text-gray-600 mb-4 font-medium">${errorMsg}</p>
+                            <p class="text-xs text-gray-400 mb-6">Entrando en modo demostración local...</p>
+                            <button onclick="document.getElementById('loader').remove()" class="bg-gray-800 text-white px-6 py-2 rounded-full font-bold hover:bg-gray-700 transition">Continuar Offline</button>
+                        </div>`;
                 }
-                
-                // Cargar datos locales
+
+                isOffline = true;
+                toggleOfflineUI(true);
                 loadLocalData();
-                
-                // Si no hay datos locales, sembrar datos de prueba
-                if (products.length === 0) {
-                    await seedDataLocal();
-                } else {
+                if (products.length === 0) await seedDataLocal();
+                else {
                     window.renderProducts();
                     window.renderAdminPanel();
                 }
                 
-                window.showNotification("Modo Demo Local Activado", "info");
+                setTimeout(() => { if(document.getElementById('loader')) document.getElementById('loader').remove(); }, 4000);
             }
         };
         
-        // Helper para quitar loader en éxito
         const removeLoader = () => {
             const loader = document.getElementById('loader');
             if(loader) {
@@ -415,24 +440,31 @@
                     seedData();
                 }
             }, (error) => {
-                console.error("Error productos:", error);
-                // Fallback a local si el listener falla
-                isOffline = true;
-                loadLocalData();
-                if(products.length === 0) seedDataLocal();
-                window.renderProducts();
-                removeLoader();
+                console.warn("Conexión Firestore limitada:", error.code);
+                
+                if (!isOffline) {
+                    isOffline = true;
+                    toggleOfflineUI(true);
+                    loadLocalData();
+                    if(products.length === 0) seedDataLocal();
+                    window.renderProducts();
+                    removeLoader();
+                    // Usar window.showNotification con seguridad
+                    if(products.length > 0 && typeof window.showNotification === 'function') {
+                         window.showNotification("Modo Demo: Sin permisos de nube", "warning");
+                    }
+                }
             });
 
             onSnapshot(ordersRef, (snapshot) => {
                 orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if(isAdminLoggedIn) window.renderAdminOrders();
-            });
+            }, (e) => console.warn("Offline orders:", e.code));
 
             onSnapshot(apptsRef, (snapshot) => {
                 appointments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if(isAdminLoggedIn) window.renderAdminAppointments();
-            });
+            }, (e) => console.warn("Offline appts:", e.code));
         };
 
         // --- DATA OPERATIONS (HYBRID CLOUD/LOCAL) ---
@@ -444,14 +476,19 @@
                 saveLocalData();
                 window.renderProducts();
                 if(isAdminLoggedIn) window.renderAdminProducts();
-                window.showNotification("Guardado en Demo (Local)", "success");
+                window.showNotification("Guardado localmente (Sin Nube)", "info");
                 return;
             }
             try {
                 if(!auth.currentUser) return;
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'products'), productData);
-                window.showNotification("Producto añadido a la nube", "success");
-            } catch (e) { console.error(e); window.showNotification("Error al guardar", "error"); }
+                window.showNotification("¡Producto guardado en la nube!", "success");
+            } catch (e) { 
+                console.warn(e);
+                isOffline = true; 
+                toggleOfflineUI(true);
+                window.addProductToDB(productData);
+            }
         };
 
         window.updateProductInDB = async (id, data) => {
@@ -460,14 +497,19 @@
                 if(idx >= 0) { products[idx] = { ...products[idx], ...data }; saveLocalData(); }
                 window.renderProducts();
                 if(isAdminLoggedIn) window.renderAdminProducts();
-                window.showNotification("Actualizado (Local)", "success");
+                window.showNotification("Actualizado localmente", "info");
                 return;
             }
             try {
                 if(!auth.currentUser) return;
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id), data);
-                window.showNotification("Inventario actualizado", "success");
-            } catch (e) { window.showNotification("Error al actualizar", "error"); }
+                window.showNotification("Inventario actualizado en nube", "success");
+            } catch (e) { 
+                console.warn(e);
+                isOffline = true;
+                toggleOfflineUI(true);
+                window.showNotification("Error de nube. Cambiando a local.", "warning");
+            }
         };
 
         window.deleteProductFromDB = async (id) => {
@@ -476,14 +518,19 @@
                 saveLocalData();
                 window.renderProducts();
                 if(isAdminLoggedIn) window.renderAdminProducts();
-                window.showNotification("Eliminado (Local)", "info");
+                window.showNotification("Eliminado localmente", "info");
                 return;
             }
             try {
                 if(!auth.currentUser) return;
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'products', id));
-                window.showNotification("Producto eliminado", "info");
-            } catch (e) { window.showNotification("Error al eliminar", "error"); }
+                window.showNotification("Producto eliminado de la nube", "info");
+            } catch (e) { 
+                console.warn(e);
+                isOffline = true;
+                toggleOfflineUI(true);
+                window.deleteProductFromDB(id);
+            }
         };
 
         window.addOrderToDB = async (orderData) => {
@@ -492,12 +539,18 @@
                  orders.push(newOrder);
                  saveLocalData();
                  if(isAdminLoggedIn) window.renderAdminOrders();
-                 // Simular delay
-                 setTimeout(() => window.showNotification("Pedido simulado (Offline)", "success"), 500);
+                 setTimeout(() => window.showNotification("Pedido guardado en tu dispositivo (Offline)", "warning"), 500);
                  return;
              }
              if(!auth.currentUser) return;
-             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'), orderData);
+             try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'orders'), orderData);
+             } catch(e) { 
+                 console.warn(e); 
+                 isOffline = true; 
+                 toggleOfflineUI(true);
+                 window.addOrderToDB(orderData);
+             }
         };
 
         window.addAppointmentToDB = async (apptData) => {
@@ -506,10 +559,18 @@
                  appointments.push(newAppt);
                  saveLocalData();
                  if(isAdminLoggedIn) window.renderAdminAppointments();
+                 setTimeout(() => window.showNotification("Cita guardada en tu dispositivo (Offline)", "warning"), 500);
                  return;
              }
              if(!auth.currentUser) return;
-             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'), apptData);
+             try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'), apptData);
+             } catch(e) { 
+                 console.warn(e);
+                 isOffline = true;
+                 toggleOfflineUI(true);
+                 window.addAppointmentToDB(apptData);
+             }
         };
         
         window.updateOrderInDB = async (id, status) => {
@@ -519,7 +580,8 @@
                 return;
             }
             if(!auth.currentUser) return;
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', id), { status });
+            try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', id), { status }); }
+            catch(e) { console.warn(e); }
         };
 
         window.deleteOrderFromDB = async (id) => {
@@ -530,7 +592,8 @@
                 return;
             }
             if(!auth.currentUser) return;
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', id));
+            try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', id)); }
+            catch(e) { console.warn(e); }
         };
 
         window.deleteAppointmentFromDB = async (id) => {
@@ -541,7 +604,8 @@
                 return;
             }
             if(!auth.currentUser) return;
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', id));
+            try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', id)); }
+            catch(e) { console.warn(e); }
         };
 
         // --- UTILS ---
@@ -652,7 +716,7 @@
                             <input type="file" id="np-file" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
                         </div>
                         <textarea id="np-desc" placeholder="Descripción corta" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"></textarea>
-                        <button type="submit" class="w-full bg-gray-900 text-white py-3 rounded-xl hover:bg-orange-600 transition-colors font-bold">Guardar ${isOffline ? '(Local)' : ''}</button>
+                        <button type="submit" class="w-full bg-gray-900 text-white py-3 rounded-xl hover:bg-orange-600 transition-colors font-bold">Guardar ${isOffline ? '(Local)' : 'en Nube'}</button>
                     </form>
                 </div>
                 <div class="lg:col-span-2 space-y-3">
@@ -685,201 +749,6 @@
                 });
                 e.target.reset();
             });
-        };
-
-        window.renderAdminOrders = () => {
-            document.getElementById('admin-envios').innerHTML = orders.length ? orders.map(o => `
-                <div class="bg-white p-5 rounded-xl shadow-sm mb-3 border-l-4 ${o.status === 'nuevo' ? 'border-green-500' : 'border-blue-500'}">
-                    <div class="flex justify-between font-bold text-lg mb-2">
-                        <span class="flex items-center gap-2">📦 #${o.orderId || 'ID'}</span>
-                        <span class="text-orange-600">$${o.total}</span>
-                    </div>
-                    <div class="text-sm text-gray-600 mb-3 bg-gray-50 p-3 rounded-lg">
-                        <p><strong>Cliente:</strong> ${o.customer} (${o.phone})</p>
-                        <p><strong>Dirección:</strong> ${o.address}</p>
-                    </div>
-                    <div class="flex justify-between items-center mt-2">
-                        <span class="uppercase text-xs font-bold px-3 py-1 rounded-full ${o.status === 'nuevo' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">${o.status || 'nuevo'}</span>
-                        <div class="flex gap-2">
-                            <button onclick="window.updateOrderInDB('${o.id}', 'en-camino')" class="text-xs bg-blue-600 text-white px-3 py-2 rounded-lg font-bold hover:bg-blue-700">Marcar Enviado</button>
-                            <button onclick="window.deleteOrderFromDB('${o.id}')" class="text-xs bg-red-100 text-red-700 px-3 py-2 rounded-lg hover:bg-red-200">Borrar</button>
-                        </div>
-                    </div>
-                </div>`).join('') : '<div class="text-center py-10 text-gray-400">No hay pedidos pendientes.</div>';
-        };
-
-        window.renderAdminAppointments = () => {
-             document.getElementById('admin-citas').innerHTML = appointments.length ? appointments.map(a => `
-                <div class="bg-white p-5 rounded-xl shadow-sm mb-3 border-l-4 border-purple-500 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <div class="font-bold text-lg text-gray-800">${a.pet} <span class="text-sm font-normal text-gray-500">(${a.owner})</span></div>
-                        <div class="text-sm font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded inline-block mt-1">${a.date} - ${a.time}</div>
-                        <div class="text-xs text-gray-500 mt-2 italic">${a.reason}</div>
-                    </div>
-                    <button onclick="window.deleteAppointmentFromDB('${a.id}')" class="text-red-500 text-xs font-bold hover:bg-red-50 px-3 py-2 rounded border border-red-100">Cancelar Cita</button>
-                </div>`).join('') : '<div class="text-center py-10 text-gray-400">Agenda libre hoy.</div>';
-        };
-
-        window.showAdminTab = (tab, btn) => {
-            document.querySelectorAll('.admin-content').forEach(e => e.classList.add('hidden'));
-            document.getElementById(`admin-${tab}`).classList.remove('hidden');
-            document.querySelectorAll('.admin-tab').forEach(b => { b.classList.remove('bg-orange-600','text-white'); b.classList.add('bg-gray-800','text-gray-400'); });
-            btn.classList.remove('bg-gray-800','text-gray-400'); btn.classList.add('bg-orange-600','text-white');
-            if(tab === 'productos') window.renderAdminProducts();
-            if(tab === 'envios') window.renderAdminOrders();
-            if(tab === 'citas') window.renderAdminAppointments();
-        };
-
-        window.editProduct = (id) => {
-            const p = products.find(x => x.id === id);
-            if(!p) return;
-            const modal = document.getElementById('edit-product-modal');
-            
-            modal.innerHTML = `
-            <div class="bg-white p-8 rounded-3xl max-w-md w-full mx-4 animate-[slideUp_0.3s_ease] shadow-2xl">
-                <h3 class="font-extrabold text-2xl mb-6 text-gray-800">Editar Item ZOOT</h3>
-                <form id="edit-form" class="space-y-4">
-                    <div class="text-center mb-4 bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
-                        <img src="${p.image}" class="h-24 w-24 object-cover rounded-lg mx-auto mb-3 shadow-sm">
-                        <label class="block text-sm font-bold text-orange-600 cursor-pointer hover:underline">
-                            Cambiar Imagen
-                            <input type="file" id="ep-file" accept="image/*" class="hidden">
-                        </label>
-                    </div>
-                    <input id="ep-name" value="${p.name}" placeholder="Nombre" class="w-full p-3 border rounded-xl outline-none focus:border-orange-500" required>
-                    <input id="ep-price" type="number" value="${p.price}" placeholder="Precio" class="w-full p-3 border rounded-xl outline-none focus:border-orange-500" required>
-                    <select id="ep-cat" class="w-full p-3 border rounded-xl outline-none focus:border-orange-500 bg-white">
-                        <option value="alimento" ${p.category === 'alimento' ? 'selected' : ''}>Alimento</option>
-                        <option value="juguetes" ${p.category === 'juguetes' ? 'selected' : ''}>Juguetes</option>
-                        <option value="medicamentos" ${p.category === 'medicamentos' ? 'selected' : ''}>Medicamentos</option>
-                        <option value="accesorios" ${p.category === 'accesorios' ? 'selected' : ''}>Accesorios</option>
-                    </select>
-                    <textarea id="ep-desc" placeholder="Descripción" class="w-full p-3 border rounded-xl outline-none focus:border-orange-500 h-24 resize-none">${p.description}</textarea>
-                    <div class="flex justify-end gap-3 pt-2">
-                        <button type="button" onclick="document.getElementById('edit-product-modal').classList.remove('show')" class="px-5 py-2 border border-gray-300 rounded-xl font-bold text-gray-600 hover:bg-gray-50">Cancelar</button>
-                        <button type="submit" class="px-5 py-2 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 shadow-lg">Guardar Cambios</button>
-                    </div>
-                </form>
-            </div>`;
-            
-            modal.classList.add('show');
-            
-            document.getElementById('edit-form').addEventListener('submit', async e => {
-                e.preventDefault();
-                const fileInput = document.getElementById('ep-file');
-                let imageToSave = p.image;
-
-                if (fileInput.files && fileInput.files[0]) {
-                    try {
-                        imageToSave = await processImage(fileInput.files[0]);
-                    } catch (err) {
-                        console.error("Error processing image", err);
-                    }
-                }
-
-                await window.updateProductInDB(id, { 
-                    name: document.getElementById('ep-name').value, 
-                    price: Number(document.getElementById('ep-price').value),
-                    category: document.getElementById('ep-cat').value, 
-                    description: document.getElementById('ep-desc').value,
-                    image: imageToSave
-                });
-                modal.classList.remove('show');
-            });
-        };
-
-        // Checkout Logic
-        window.showCheckoutForm = () => {
-            const modal = document.getElementById('checkout-modal');
-            modal.innerHTML = `
-            <div class="bg-white p-8 rounded-3xl max-w-md w-full mx-4 animate-[slideUp_0.3s_ease] shadow-2xl relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-2 gradient-bg"></div>
-                <h3 class="font-extrabold text-2xl mb-6 text-gray-800">Finalizar Compra</h3>
-                <form id="checkout-form" class="space-y-4">
-                    <input id="c-name" placeholder="Tu Nombre" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-orange-500" required>
-                    <input id="c-phone" placeholder="Teléfono de contacto" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-orange-500" required>
-                    <textarea id="c-addr" placeholder="Dirección de entrega completa" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-orange-500 h-24 resize-none" required></textarea>
-                    <div class="bg-orange-50 p-4 rounded-xl flex justify-between items-center">
-                        <span class="text-sm font-bold text-gray-500">Total a Pagar:</span>
-                        <span class="text-xl font-black text-orange-600">$${cart.reduce((s,i)=>s+(i.price*i.quantity),0)}</span>
-                    </div>
-                    <button type="submit" class="w-full gradient-bg text-white py-4 rounded-xl font-bold text-lg hover:brightness-110 shadow-xl transition-all">Confirmar Pedido</button>
-                </form>
-                <button onclick="document.getElementById('checkout-modal').classList.remove('show')" class="mt-4 text-gray-400 text-sm font-medium hover:text-gray-600 w-full text-center">Cancelar operación</button>
-            </div>`;
-            modal.classList.add('show');
-            document.getElementById('checkout-form').addEventListener('submit', async e => {
-                e.preventDefault();
-                const order = { orderId: 'ZOOT'+Date.now().toString().slice(-4), customer: document.getElementById('c-name').value, phone: document.getElementById('c-phone').value, address: document.getElementById('c-addr').value, total: cart.reduce((s,i)=>s+(i.price*i.quantity),0), status: 'nuevo', items: cart };
-                
-                // Send Whatsapp ZOOTPETS Style
-                let msg = `🐶 *NUEVO PEDIDO ZOOTPETS* 🐱\n\n🆔 ID: ${order.orderId}\n👤 Cliente: ${order.customer}\n📞 Tel: ${order.phone}\n📍 Dirección: ${order.address}\n💰 Total: $${order.total}\n\n📝 *Detalle:*\n${order.items.map(i => `- ${i.name} x${i.quantity}`).join('\n')}`;
-                window.open(`https://wa.me/5212452070033?text=${encodeURIComponent(msg)}`, '_blank');
-                
-                await window.addOrderToDB(order);
-                cart = []; saveCart(); window.renderCart(); document.getElementById('checkout-modal').classList.remove('show'); window.toggleCart();
-                window.showNotification("¡Gracias! Tu pedido está en camino 🚚", "success");
-            });
-        };
-        
-        // Appointment Logic
-        document.getElementById('appointment-form').addEventListener('submit', async e => {
-            e.preventDefault();
-            const appt = {
-                owner: document.getElementById('owner-name').value,
-                phone: document.getElementById('owner-phone').value,
-                pet: document.getElementById('pet-name').value,
-                reason: document.getElementById('appointment-reason').value,
-                date: document.getElementById('appointment-date').value,
-                time: document.getElementById('appointment-time').value
-            };
-            let msg = `🏥 *CITA VETERINARIA ZOOTPETS* 🩺\n\n👤 Dueño: ${appt.owner}\n🐾 Mascota: ${appt.pet}\n📋 Motivo: ${appt.reason}\n📅 Fecha: ${appt.date}\n⏰ Hora: ${appt.time}`;
-            window.open(`https://wa.me/5212452070033?text=${encodeURIComponent(msg)}`, '_blank');
-            await window.addAppointmentToDB(appt);
-            e.target.reset();
-            window.showNotification("Cita agendada correctamente 📅", "success");
-        });
-
-        // Admin Login
-        document.getElementById('admin-login-form').addEventListener('submit', e => {
-            e.preventDefault();
-            if(document.getElementById('admin-username').value === 'admin' && document.getElementById('admin-password').value === 'password123') {
-                isAdminLoggedIn = true; localStorage.setItem('isAdmin', 'true'); window.renderAdminPanel();
-            } else window.showNotification('Credenciales inválidas 🔒', 'error');
-        });
-        window.logoutAdmin = () => { isAdminLoggedIn = false; localStorage.removeItem('isAdmin'); window.renderAdminPanel(); };
-
-        // Helpers
-        window.showNotification = (msg, type) => {
-            const div = document.createElement('div'); 
-            div.className = `fixed top-24 right-6 px-6 py-4 rounded-xl shadow-2xl text-white font-bold z-[2000] animate-[slideUp_0.3s_ease] flex items-center gap-3 ${type === 'error' ? 'bg-red-500' : (type === 'info' ? 'bg-blue-600' : 'bg-gray-900')}`; 
-            div.innerHTML = type === 'error' ? `<span>⚠️</span> ${msg}` : `<span>✅</span> ${msg}`;
-            document.body.appendChild(div); 
-            setTimeout(() => div.remove(), 3000);
-        };
-        window.scrollToSection = (id) => document.getElementById(id)?.scrollIntoView({behavior: 'smooth'});
-        window.toggleMobileMenu = () => document.getElementById('mobile-menu').classList.toggle('hidden');
-        window.searchOrder = () => {
-             const id = document.getElementById('order-search').value; 
-             const o = orders.find(x => x.orderId == id || x.id == id);
-             const res = document.getElementById('order-result');
-             res.classList.remove('hidden');
-             res.innerHTML = o ? `
-                <div class="text-center">
-                    <div class="text-4xl mb-2">${o.status === 'en-camino' ? '🚚' : '📦'}</div>
-                    <h3 class="font-bold text-xl text-gray-800">Pedido #${o.orderId}</h3>
-                    <div class="my-4">
-                        <div class="w-full bg-gray-200 rounded-full h-2.5">
-                          <div class="bg-orange-600 h-2.5 rounded-full" style="width: ${o.status === 'en-camino' ? '80%' : '20%'}"></div>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2 uppercase tracking-widest font-bold">${o.status}</p>
-                    </div>
-                    <p class="font-medium text-gray-600">Total: $${o.total}</p>
-                </div>` : '<p class="text-gray-500 text-center italic">No encontramos ese pedido. Revisa el ID.</p>';
-        };
-        window.handleReasonChange = () => {
-             const val = document.getElementById('appointment-reason').value;
-             document.getElementById('address-container').classList.toggle('hidden', !val.includes('Domicilio'));
         };
 
         // Image Compressor
