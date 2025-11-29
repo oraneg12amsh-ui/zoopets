@@ -617,6 +617,7 @@
             const [showUpload, setShowUpload] = useState(false);
             const [showConfig, setShowConfig] = useState(false);
             const [showRules, setShowRules] = useState(false);
+            const [showQR, setShowQR] = useState(false); // Estado para el QR del Header
             
             // Estado para el visor que ahora guarda el OBJETO foto completo, pero usaremos el índice para navegar
             const [viewerPhotoId, setViewerPhotoId] = useState(null);
@@ -726,11 +727,12 @@
                         <>
                             {/* Header */}
                             <header className="fixed top-0 inset-x-0 bg-white/80 backdrop-blur-md border-b border-red-50 z-40 p-3 flex justify-between items-center shadow-sm">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-700 flex items-center justify-center text-white"><Camera size={16}/></div>
-                                    <h1 className="font-serif font-bold text-red-950 truncate max-w-[150px]">{config.title}</h1>
+                                <div className="flex items-center gap-2 flex-1 min-w-0 mr-2">
+                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-700 flex items-center justify-center text-white flex-shrink-0"><Camera size={16}/></div>
+                                    <h1 className="font-serif font-bold text-red-950 truncate text-lg">{config.title}</h1>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-1 flex-shrink-0">
+                                    <button onClick={()=>setShowQR(true)} className="p-2 hover:bg-red-50 rounded-full text-red-800" title="Ver QR"><QrCode size={20}/></button>
                                     <button onClick={()=>setShowRules(true)} className="p-2 hover:bg-red-50 rounded-full text-red-800" title="Ver Reglas"><BookOpen size={20}/></button>
                                     <button onClick={()=>setShowConfig(true)} className="p-2 hover:bg-red-50 rounded-full text-red-800"><Settings size={20}/></button>
                                     <button onClick={()=>confirm("¿Salir?") && window.location.reload()} className="p-2 hover:bg-red-50 rounded-full text-red-800"><LogOut size={20}/></button>
@@ -815,6 +817,21 @@
                                     hasPrev={currentPhotoIndex > 0}
                                     toggleReaction={toggleReaction}
                                 />
+                            )}
+
+                            {/* QR Modal (Reutilizando diseño) */}
+                            {showQR && (
+                                <div className="fixed inset-0 z-[100] bg-red-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowQR(false)}>
+                                    <div className="bg-white p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+                                        <h3 className="font-serif text-xl mb-4 text-red-900">Escanea para entrar</h3>
+                                        <div className="bg-white p-2 border border-red-100 rounded-xl inline-block mb-4 shadow-inner">
+                                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.href)}`} alt="QR" className="w-48 h-48 mix-blend-multiply" />
+                                        </div>
+                                        <button onClick={() => setShowQR(false)} className="w-full py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-900 font-bold text-sm flex items-center justify-center gap-2">
+                                            Cerrar
+                                        </button>
+                                    </div>
+                                </div>
                             )}
 
                             <ConfigModal isOpen={showConfig} onClose={()=>setShowConfig(false)} addToast={addToast} currentConfig={config} />
