@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -50,7 +49,7 @@
         } from 'firebase/firestore';
         import { 
             Camera, Send, X, QrCode, Heart, Image as ImageIcon, Loader2, WifiOff, 
-            Copy, Check, Trash2, LogOut, AlertCircle, Info, Settings, Type, Sparkles, Lock, Share2
+            Copy, Check, Trash2, LogOut, AlertCircle, Info, Settings, Type, Sparkles, Lock, Share2, BookOpen
         } from 'lucide-react';
 
         // ==========================================
@@ -67,16 +66,18 @@
         } 
         // B) ¿Estamos en tu PC/Hosting? Usar configuración manual
         else {
-            console.log("Modo: Exportación (Configuración manual requerida)");
-            // ⚠️ IMPORTANTE: SI EXPORTAS ESTE ARCHIVO, REEMPLAZA ESTO CON TUS DATOS DE FIREBASE:
+            console.log("Modo: Exportación (Configuración manual activada)");
+            // ✅ CONFIGURACIÓN REAL DE "PLATAFORMA CARMEN SERDÁN"
             firebaseConfig = {
-                apiKey: "TU_API_KEY_REAL", 
-                authDomain: "tu-proyecto.firebaseapp.com",
-                projectId: "tu-proyecto",
-                storageBucket: "tu-proyecto.firebasestorage.app",
-                messagingSenderId: "123456789",
-                appId: "1:123456789:web:abcdef"
+                apiKey: "AIzaSyDT9M_s82TJrxwFMMFFt_M7GrQdVUFXZ2c",
+                authDomain: "plataforma-carmen-serdan.firebaseapp.com",
+                projectId: "plataforma-carmen-serdan",
+                storageBucket: "plataforma-carmen-serdan.firebasestorage.app",
+                messagingSenderId: "124079826705",
+                appId: "1:124079826705:web:5e2abd11506ae24accceb0",
+                measurementId: "G-VCYFS0K3BB"
             };
+            // Identificador para la colección de datos
             appId = 'mirada-terapeutica-web'; 
             initialAuthToken = null;
         }
@@ -93,35 +94,6 @@
         } catch (e) {
             console.error("Error inicializando Firebase. Revisa la configuración.", e);
         }
-
-        // --- GEMINI API ---
-        const generateAIDescription = async (base64Image) => {
-            const apiKey = ""; // Pega tu API Key de Gemini aquí si deseas usar la IA fuera del chat
-            if (!apiKey) return null;
-
-            const base64Data = base64Image.split(',')[1];
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: "Actúa como un poeta terapeuta visual. Analiza esta imagen y escribe una descripción muy breve (máximo 2 oraciones), profunda, empática y poética en español." },
-                                { inlineData: { mimeType: "image/jpeg", data: base64Data } }
-                            ]
-                        }]
-                    })
-                });
-                const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-            } catch (error) {
-                console.error("Error IA:", error);
-                return null;
-            }
-        };
 
         // --- COMPONENTES ---
 
@@ -165,9 +137,62 @@
 
         // --- PANTALLAS ---
 
-        const LoginScreen = ({ onLogin, addToast, config, currentUser }) => {
+        const RulesModal = ({ isOpen, onClose }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+                    <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 bg-red-900 text-white flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <BookOpen size={24} />
+                                <h3 className="font-serif text-xl font-bold">Reglas del Taller</h3>
+                            </div>
+                            <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors"><X size={24}/></button>
+                        </div>
+                        <div className="p-6 overflow-y-auto space-y-6 text-stone-700 leading-relaxed">
+                            <div className="flex gap-4">
+                                <div className="text-red-500 font-bold text-xl">1.</div>
+                                <div>
+                                    <h4 className="font-bold text-red-900 mb-1">Espacio Seguro</h4>
+                                    <p className="text-sm">Este es un lugar libre de juicios. Comentamos desde el respeto y la empatía.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="text-red-500 font-bold text-xl">2.</div>
+                                <div>
+                                    <h4 className="font-bold text-red-900 mb-1">Autenticidad</h4>
+                                    <p className="text-sm">Comparte fotos que signifiquen algo para ti. No buscamos perfección técnica, sino honestidad emocional.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="text-red-500 font-bold text-xl">3.</div>
+                                <div>
+                                    <h4 className="font-bold text-red-900 mb-1">Confidencialidad</h4>
+                                    <p className="text-sm">Lo que se comparte en el taller, se queda en el taller. Respetamos la privacidad de las historias de los compañeros.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="text-red-500 font-bold text-xl">4.</div>
+                                <div>
+                                    <h4 className="font-bold text-red-900 mb-1">Escucha Activa</h4>
+                                    <p className="text-sm">Prestamos atención a lo que dicen las imágenes y las palabras de los demás.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-red-50 bg-red-50/50 text-center">
+                            <button onClick={onClose} className="bg-red-800 text-white px-8 py-3 rounded-xl font-medium shadow-lg hover:bg-red-900 transition-colors w-full">
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LoginScreen = ({ onLogin, addToast, config, currentUser, onShowRules }) => {
             const [name, setName] = useState(currentUser?.displayName || '');
             const [loading, setLoading] = useState(false);
+            const [showLoginQR, setShowLoginQR] = useState(false);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
@@ -178,9 +203,13 @@
                         await updateProfile(auth.currentUser, { displayName: name });
                         onLogin();
                     } else {
-                        // Si no hay usuario, intentamos iniciar sesión anónima nuevamente
+                        // Intentar autenticación (custom token o anónimo)
                         if (initialAuthToken) {
-                            await signInWithCustomToken(auth, initialAuthToken);
+                            try {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } catch (err) {
+                                await signInAnonymously(auth);
+                            }
                         } else {
                             await signInAnonymously(auth);
                         }
@@ -201,30 +230,23 @@
                 if (navigator.share) {
                     navigator.share({ title: config.title, url }).catch(()=>{});
                 } else {
-                    // CORRECCIÓN: Usar execCommand como fallback seguro para iframes/bloqueos de API
+                    // Fallback seguro para copiar
                     try {
                         const textArea = document.createElement("textarea");
                         textArea.value = url;
-                        // Asegurar que no sea visible pero sea parte del DOM
                         textArea.style.position = "fixed";
                         textArea.style.left = "-9999px";
                         textArea.style.top = "0";
                         document.body.appendChild(textArea);
-                        
                         textArea.focus();
                         textArea.select();
-                        
                         const successful = document.execCommand('copy');
                         document.body.removeChild(textArea);
-                        
-                        if (successful) {
-                            addToast("Enlace copiado", "success");
-                        } else {
-                            throw new Error("Copy failed");
-                        }
+                        if (successful) addToast("Enlace copiado", "success");
+                        else throw new Error("Copy failed");
                     } catch (err) {
                         console.error('Fallback copy failed', err);
-                        addToast("Copia el enlace manualmente de la barra de direcciones", "error");
+                        addToast("Copia el enlace manualmente", "error");
                     }
                 }
             };
@@ -251,10 +273,33 @@
                                 {loading ? <Loader2 className="animate-spin"/> : 'Ingresar al Taller'}
                             </button>
                         </form>
-                        <button onClick={handleShare} className="mt-6 text-xs text-red-400 hover:text-red-600 flex items-center justify-center gap-2 mx-auto py-2 px-4 rounded-full hover:bg-red-50">
-                            <Share2 size={16} /> Compartir Acceso
-                        </button>
+                        
+                        <div className="flex flex-wrap justify-center gap-3 mt-6">
+                            <button onClick={onShowRules} className="text-xs text-red-700 bg-red-100 hover:bg-red-200 flex items-center justify-center gap-2 py-2 px-4 rounded-full transition-colors font-medium w-full mb-2">
+                                <BookOpen size={16} /> Reglas del Taller
+                            </button>
+                            <button onClick={handleShare} className="text-xs text-red-400 hover:text-red-600 flex items-center justify-center gap-2 py-2 px-4 rounded-full hover:bg-red-50 transition-colors">
+                                <Share2 size={16} /> Compartir Enlace
+                            </button>
+                            <button onClick={() => setShowLoginQR(true)} className="text-xs text-red-400 hover:text-red-600 flex items-center justify-center gap-2 py-2 px-4 rounded-full hover:bg-red-50 transition-colors">
+                                <QrCode size={16} /> Mostrar QR
+                            </button>
+                        </div>
                     </div>
+
+                    {showLoginQR && (
+                        <div className="fixed inset-0 z-[100] bg-red-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowLoginQR(false)}>
+                            <div className="bg-white p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+                                <h3 className="font-serif text-xl mb-4 text-red-900">Escanea para entrar</h3>
+                                <div className="bg-white p-2 border border-red-100 rounded-xl inline-block mb-4 shadow-inner">
+                                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.href)}`} alt="QR" className="w-48 h-48 mix-blend-multiply" />
+                                </div>
+                                <button onClick={() => setShowLoginQR(false)} className="w-full py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-900 font-bold text-sm flex items-center justify-center gap-2">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -355,6 +400,7 @@
             const [config, setConfig] = useState({ title: 'Mirada Terapéutica', subtitle: 'Bienvenido' });
             const [showUpload, setShowUpload] = useState(false);
             const [showConfig, setShowConfig] = useState(false);
+            const [showRules, setShowRules] = useState(false);
             const [showViewer, setShowViewer] = useState(null);
             
             // Toast Helper
@@ -420,7 +466,6 @@
             const [upFile, setUpFile] = useState(null);
             const [upDesc, setUpDesc] = useState('');
             const [isUp, setIsUp] = useState(false);
-            const [aiLoading, setAiLoading] = useState(false);
             const [upPreview, setUpPreview] = useState(null);
 
             const handleUploadConfirm = async () => {
@@ -436,15 +481,6 @@
                 } catch(e) { console.error(e); addToast("Error al subir", "error"); } finally { setIsUp(false); }
             };
 
-            const runAI = async () => {
-                if(!upPreview) return;
-                setAiLoading(true);
-                const txt = await generateAIDescription(upPreview);
-                if(txt) { setUpDesc(p => (p ? p+"\n"+txt : txt)); addToast("IA Generada", "success"); }
-                else addToast("Error IA", "error");
-                setAiLoading(false);
-            };
-
             if (!user) return <div className="h-screen flex items-center justify-center bg-rose-50 text-red-400"><Loader2 className="animate-spin" size={40}/></div>;
 
             return (
@@ -456,7 +492,13 @@
                     <ToastContainer toasts={toasts} />
 
                     {!hasEntered ? (
-                        <LoginScreen onLogin={() => setHasEntered(true)} addToast={addToast} config={config} currentUser={user} />
+                        <LoginScreen 
+                            onLogin={() => setHasEntered(true)} 
+                            addToast={addToast} 
+                            config={config} 
+                            currentUser={user} 
+                            onShowRules={() => setShowRules(true)}
+                        />
                     ) : (
                         <>
                             {/* Header */}
@@ -466,6 +508,7 @@
                                     <h1 className="font-serif font-bold text-red-950 truncate max-w-[150px]">{config.title}</h1>
                                 </div>
                                 <div className="flex gap-2">
+                                    <button onClick={()=>setShowRules(true)} className="p-2 hover:bg-red-50 rounded-full text-red-800" title="Ver Reglas"><BookOpen size={20}/></button>
                                     <button onClick={()=>setShowConfig(true)} className="p-2 hover:bg-red-50 rounded-full text-red-800"><Settings size={20}/></button>
                                     <button onClick={()=>confirm("¿Salir?") && window.location.reload()} className="p-2 hover:bg-red-50 rounded-full text-red-800"><LogOut size={20}/></button>
                                 </div>
@@ -525,9 +568,6 @@
                                             )}
                                             <div className="relative">
                                                 <textarea value={upDesc} onChange={e=>setUpDesc(e.target.value)} placeholder="¿Qué te hizo detenerte a mirar esta foto?" className="w-full p-4 bg-red-50 rounded-xl h-32"/>
-                                                {upPreview && <button onClick={runAI} disabled={aiLoading} className="absolute bottom-2 right-2 text-xs bg-white text-rose-600 px-2 py-1 rounded-full border border-rose-100 flex gap-1 items-center">
-                                                    {aiLoading ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12}/>} IA
-                                                </button>}
                                             </div>
                                         </div>
                                         <div className="p-4 border-t">
@@ -559,6 +599,8 @@
                             <ConfigModal isOpen={showConfig} onClose={()=>setShowConfig(false)} addToast={addToast} currentConfig={config} />
                         </>
                     )}
+                    
+                    <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
                 </div>
             );
         };
