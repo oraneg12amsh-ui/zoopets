@@ -213,7 +213,8 @@
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const maxWidth = 1000;
+                        // AJUSTE IMPORTANTE: Reducimos el tamaño máximo a 700px para asegurar que pese menos de 1MB
+                        const maxWidth = 700; 
                         let { width, height } = img;
                         if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } }
                         else { if (height > maxWidth) { width *= maxWidth / height; height = maxWidth; } }
@@ -221,7 +222,8 @@
                         const ctx = canvas.getContext('2d');
                         if (filterType !== 'normal') ctx.filter = FILTERS[filterType].filter;
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                        // AJUSTE IMPORTANTE: Calidad JPEG a 0.6
+                        resolve(canvas.toDataURL('image/jpeg', 0.6));
                     };
                     img.onerror = reject;
                 };
@@ -375,6 +377,7 @@
             const handleFile = (e, isA) => {
                 const f = e.target.files[0];
                 if (f) {
+                    if (f.size > 25 * 1024 * 1024) { addToast("Imagen muy grande", "error"); return; }
                     const r = new FileReader();
                     r.onload = () => isA ? setPhotoA(r.result) : setPhotoB(r.result);
                     r.readAsDataURL(f);
@@ -384,11 +387,14 @@
             const handleFinalUpload = async () => {
                 setUploading(true);
                 try {
-                    // Upload as a single "duo" type document
+                    // Process images to ensure size compliance
+                    const finalA = await processImage(dataURLtoFile(photoA, "imgA.jpg"));
+                    const finalB = await processImage(dataURLtoFile(photoB, "imgB.jpg"));
+
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'workshop_photos'), {
                         type: 'duo',
-                        imgA: photoA, challengeA,
-                        imgB: photoB, challengeB,
+                        imgA: finalA, challengeA,
+                        imgB: finalB, challengeB,
                         photographerName: userName, photographerId: userId,
                         likes: [], likes_funny: [], likes_love: [], likes_shock: [], likes_clown: [], likes_giggle: [],
                         createdAt: serverTimestamp(),
@@ -396,9 +402,17 @@
                     });
                     addToast("¡Reto Dúo compartido!", "success");
                     onClose();
-                } catch (e) { console.error(e); addToast("Error al subir", "error"); }
+                } catch (e) { console.error(e); addToast("Error al subir. Intenta de nuevo.", "error"); }
                 finally { setUploading(false); }
             };
+            
+            // Helper to convert dataURL back to file for processing
+            const dataURLtoFile = (dataurl, filename) => {
+                let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+                    bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+                while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+                return new File([u8arr], filename, {type:mime});
+            }
 
             if (!isOpen) return null;
 
@@ -406,10 +420,19 @@
                 <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[80] flex items-center justify-center p-4 animate-fade-in">
                     <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-white/50">
                         <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="font-bold text-lg text-indigo-800 flex items-center gap-2">
-                                <Users size={20}/> Reto de Dúos - Paso {step < 3 ? '1 (Jugador A)' : '2 (Jugador B)'}
-                            </h3>
-                            <button onClick={onClose}><X size={20}/></button>
+                            <div className="flex items-center gap-2">
+                                {step > 1 && (
+                                    <button onClick={() => setStep(1)} className="p-1 hover:bg-slate-200 rounded-full mr-2 transition-colors">
+                                        <ChevronLeft size={24} className="text-slate-600" />
+                                    </button>
+                                )}
+                                <h3 className="font-bold text-lg text-indigo-800 flex items-center gap-2">
+                                    <Users size={20}/> Reto de Dúos - Paso {step < 3 ? '1 (Jugador A)' : '2 (Jugador B)'}
+                                </h3>
+                            </div>
+                            <button onClick={onClose} className="p-2 hover:bg-red-100 hover:text-red-600 rounded-full transition-colors" title="Salir">
+                                <X size={24}/>
+                            </button>
                         </div>
                         
                         <div className="flex-1 p-6 overflow-y-auto bg-slate-50/30">
@@ -500,7 +523,8 @@
             const handleFileChange = (e) => {
                 const f = e.target.files[0];
                 if (f) {
-                    if (f.size > 8 * 1024 * 1024) { addToast("Imagen muy pesada", "error"); return; }
+                    // Increased limit to 25MB for initial input
+                    if (f.size > 25 * 1024 * 1024) { addToast("Imagen muy pesada", "error"); return; }
                     setFile(f);
                     const r = new FileReader(); r.onloadend = () => setPreview(r.result); r.readAsDataURL(f);
                 }
@@ -518,7 +542,7 @@
                     if (replyingTo) payload.parentId = replyingTo.id;
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'workshop_photos'), payload);
                     addToast("¡Foto compartida!", "success"); onClose();
-                } catch (error) { console.error(error); addToast("Error al subir", "error"); } 
+                } catch (error) { console.error(error); addToast("Error al subir (Imagen muy grande para DB).", "error"); } 
                 finally { setUploading(false); }
             };
 
@@ -760,6 +784,17 @@
                                     <div className="w-px h-6 bg-slate-200 my-auto mx-1"></div>
                                     <button onClick={()=>setShowQR(true)} className="p-2.5 hover:bg-slate-100 rounded-xl text-slate-600 hover:text-slate-900 transition-colors"><QrCode size={20}/></button>
                                     <button onClick={()=>setShowConfig(true)} className="p-2.5 hover:bg-slate-100 rounded-xl text-slate-600 hover:text-slate-900 transition-colors"><Settings size={20}/></button>
+                                    <button 
+                                        onClick={() => {
+                                            if(confirm("¿Salir de la sesión?")) {
+                                                window.location.reload();
+                                            }
+                                        }} 
+                                        className="p-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors ml-1" 
+                                        title="Salir"
+                                    >
+                                        <LogOut size={20}/>
+                                    </button>
                                 </div>
                             </header>
                             <main className="pt-24 pb-32 px-4 max-w-7xl mx-auto">
