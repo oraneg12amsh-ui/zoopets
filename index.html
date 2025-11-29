@@ -29,6 +29,10 @@
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
         .animate-fade-in { animation: fade-in 0.5s ease-out; }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* Ocultar scrollbar en la lista de reacciones horizontal */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-rose-50 text-stone-800">
@@ -36,7 +40,7 @@
 
     <!-- CÓDIGO DE LA APLICACIÓN -->
     <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useCallback } from 'react';
+        import React, { useState, useEffect, useCallback, useRef } from 'react';
         import { createRoot } from 'react-dom/client';
         import { initializeApp } from 'firebase/app';
         import { 
@@ -49,7 +53,8 @@
         } from 'firebase/firestore';
         import { 
             Camera, Send, X, QrCode, Heart, Image as ImageIcon, Loader2, WifiOff, 
-            Copy, Check, Trash2, LogOut, AlertCircle, Info, Settings, Type, Sparkles, Lock, Share2, BookOpen
+            Copy, Check, Trash2, LogOut, AlertCircle, Info, Settings, Type, Sparkles, Lock, Share2, BookOpen,
+            ChevronLeft, ChevronRight
         } from 'lucide-react';
 
         // ==========================================
@@ -57,14 +62,12 @@
         // ==========================================
         let firebaseConfig, appId, initialAuthToken;
 
-        // A) ¿Estamos en el entorno del chat? Usar variables automáticas
         if (typeof __firebase_config !== 'undefined') {
             console.log("Modo: Entorno de Chat detectado (Configuración automática)");
             firebaseConfig = JSON.parse(__firebase_config);
             appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         } 
-        // B) ¿Estamos en tu PC/Hosting? Usar configuración manual
         else {
             console.log("Modo: Exportación (Configuración manual activada)");
             // ✅ CONFIGURACIÓN REAL DE "PLATAFORMA CARMEN SERDÁN"
@@ -77,11 +80,9 @@
                 appId: "1:124079826705:web:5e2abd11506ae24accceb0",
                 measurementId: "G-VCYFS0K3BB"
             };
-            // Identificador para la colección de datos
             appId = 'mirada-terapeutica-web'; 
             initialAuthToken = null;
         }
-        // ==========================================
 
         // Inicializar Firebase
         let app, auth, db;
@@ -89,11 +90,20 @@
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
-            // Habilitar persistencia (funciona mejor en https)
             enableIndexedDbPersistence(db).catch(() => {}); 
         } catch (e) {
-            console.error("Error inicializando Firebase. Revisa la configuración.", e);
+            console.error("Error inicializando Firebase.", e);
         }
+
+        // --- MAPA DE REACCIONES ---
+        const REACTION_MAP = [
+            { icon: '❤', field: 'likes', color: 'text-red-500 bg-red-100 border-red-200' },
+            { icon: '🤣', field: 'likes_funny', color: 'text-yellow-500 bg-yellow-100 border-yellow-200' },
+            { icon: '😍', field: 'likes_love', color: 'text-rose-500 bg-rose-100 border-rose-200' },
+            { icon: '😱', field: 'likes_shock', color: 'text-blue-500 bg-blue-100 border-blue-200' },
+            { icon: '🤡', field: 'likes_clown', color: 'text-purple-500 bg-purple-100 border-purple-200' },
+            { icon: '🤭', field: 'likes_giggle', color: 'text-orange-500 bg-orange-100 border-orange-200' }
+        ];
 
         // --- COMPONENTES ---
 
@@ -203,17 +213,11 @@
                         await updateProfile(auth.currentUser, { displayName: name });
                         onLogin();
                     } else {
-                        // Intentar autenticación (custom token o anónimo)
                         if (initialAuthToken) {
-                            try {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } catch (err) {
-                                await signInAnonymously(auth);
-                            }
+                            try { await signInWithCustomToken(auth, initialAuthToken); } catch (err) { await signInAnonymously(auth); }
                         } else {
                             await signInAnonymously(auth);
                         }
-                        
                         if (auth.currentUser) {
                              await updateProfile(auth.currentUser, { displayName: name });
                              onLogin();
@@ -221,7 +225,7 @@
                     }
                 } catch (error) {
                     console.error("Login Error:", error);
-                    addToast("Error de conexión. Revisa la consola.", "error");
+                    addToast("Error de conexión.", "error");
                 } finally { setLoading(false); }
             };
 
@@ -230,7 +234,6 @@
                 if (navigator.share) {
                     navigator.share({ title: config.title, url }).catch(()=>{});
                 } else {
-                    // Fallback seguro para copiar
                     try {
                         const textArea = document.createElement("textarea");
                         textArea.value = url;
@@ -245,7 +248,6 @@
                         if (successful) addToast("Enlace copiado", "success");
                         else throw new Error("Copy failed");
                     } catch (err) {
-                        console.error('Fallback copy failed', err);
                         addToast("Copia el enlace manualmente", "error");
                     }
                 }
@@ -390,6 +392,154 @@
             );
         };
 
+        const PhotoCard = React.memo(({ photo, onClick, user, toggleReaction }) => {
+          return (
+            <div 
+              onClick={() => onClick(photo)}
+              className="break-inside-avoid bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer mb-4 border border-red-50"
+            >
+              <div className="relative aspect-auto bg-stone-100">
+                <img src={photo.imageUrl} alt="Momento" className="w-full h-auto block" loading="lazy" />
+              </div>
+              <div className="p-3">
+                <p className="text-stone-700 text-sm mb-2 font-serif italic line-clamp-2 leading-relaxed">"{photo.description}"</p>
+                <div className="flex justify-between items-center mb-3">
+                   <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider">{photo.photographerName}</span>
+                </div>
+                
+                {/* BARRA DE REACCIONES MINIATURA */}
+                <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-1" onClick={e => e.stopPropagation()}>
+                    {REACTION_MAP.map((r) => {
+                        const isSelected = photo[r.field]?.includes(user.uid);
+                        const count = photo[r.field]?.length || 0;
+                        return (
+                            <button 
+                                key={r.icon}
+                                onClick={() => toggleReaction(photo, r)}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all border ${
+                                    isSelected ? r.color : 'text-stone-400 border-transparent hover:bg-stone-50 grayscale hover:grayscale-0'
+                                }`}
+                            >
+                                <span className="text-sm">{r.icon}</span>
+                                {count > 0 && <span className="font-bold">{count}</span>}
+                            </button>
+                        );
+                    })}
+                </div>
+              </div>
+            </div>
+          );
+        }, (prev, next) => {
+            // Optimización de renderizado: solo actualizar si cambian likes o propiedades básicas
+            const idSame = prev.photo.id === next.photo.id;
+            const reactionsSame = REACTION_MAP.every(r => 
+                (prev.photo[r.field]?.length || 0) === (next.photo[r.field]?.length || 0) &&
+                prev.photo[r.field]?.includes(prev.user.uid) === next.photo[r.field]?.includes(next.user.uid)
+            );
+            return idSame && reactionsSame;
+        });
+
+        const ImageViewerModal = ({ photo, user, onClose, onDelete, onNext, onPrev, hasNext, hasPrev, toggleReaction }) => {
+            if (!photo) return null;
+            
+            // Swipe handlers
+            const [touchStart, setTouchStart] = useState(null);
+            const [touchEnd, setTouchEnd] = useState(null);
+            const minSwipeDistance = 50;
+
+            const onTouchStart = (e) => {
+                setTouchEnd(null);
+                setTouchStart(e.targetTouches[0].clientX);
+            };
+            const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+            const onTouchEnd = () => {
+                if (!touchStart || !touchEnd) return;
+                const distance = touchStart - touchEnd;
+                const isLeftSwipe = distance > minSwipeDistance;
+                const isRightSwipe = distance < -minSwipeDistance;
+                if (isLeftSwipe && hasNext) onNext();
+                if (isRightSwipe && hasPrev) onPrev();
+            };
+
+            // Keyboard navigation
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === 'ArrowRight' && hasNext) onNext();
+                    if (e.key === 'ArrowLeft' && hasPrev) onPrev();
+                    if (e.key === 'Escape') onClose();
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [hasNext, hasPrev, onNext, onPrev, onClose]);
+
+            return (
+                <div className="fixed inset-0 z-[90] bg-black flex items-center justify-center p-4" onClick={onClose}>
+                    <button onClick={onClose} className="absolute top-4 right-4 text-white/50 hover:text-white p-2 z-50 transition-colors"><X size={32}/></button>
+                    {user.uid === photo.photographerId && (
+                        <button onClick={(e)=>{e.stopPropagation(); onDelete(photo.id)}} className="absolute top-4 left-4 text-white/50 hover:text-red-400 p-2 z-50 transition-colors"><Trash2/></button>
+                    )}
+                    
+                    {/* Botón Anterior */}
+                    {hasPrev && (
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onPrev(); }}
+                            className="absolute left-2 md:left-8 text-white/70 hover:text-white p-3 rounded-full hover:bg-white/10 transition-all z-40"
+                        >
+                            <ChevronLeft size={40} />
+                        </button>
+                    )}
+
+                    {/* Contenido Central */}
+                    <div 
+                        className="relative w-full max-w-4xl max-h-screen flex flex-col items-center" 
+                        onClick={(e) => e.stopPropagation()}
+                        onTouchStart={onTouchStart}
+                        onTouchMove={onTouchMove}
+                        onTouchEnd={onTouchEnd}
+                    >
+                        <img src={photo.imageUrl} alt="Detalle" className="max-w-full max-h-[70vh] object-contain rounded-sm shadow-2xl bg-stone-900 select-none" draggable="false" />
+                        
+                        <div className="w-full mt-6 text-white text-center">
+                            <p className="text-xl font-serif italic text-stone-200 mb-4">"{photo.description || 'Sin descripción'}"</p>
+                            <div className="flex flex-col items-center gap-4">
+                                <span className="uppercase tracking-wider text-xs font-bold bg-white/10 px-4 py-1 rounded-full text-stone-300">{photo.photographerName}</span>
+                                
+                                {/* REACCIONES EN PANTALLA COMPLETA */}
+                                <div className="flex items-center gap-3 bg-white/10 px-6 py-2 rounded-full backdrop-blur-md">
+                                    {REACTION_MAP.map((r) => {
+                                        const isSelected = photo[r.field]?.includes(user.uid);
+                                        const count = photo[r.field]?.length || 0;
+                                        return (
+                                            <button 
+                                                key={r.icon}
+                                                onClick={() => toggleReaction(photo, r)}
+                                                className={`flex flex-col items-center gap-0 transition-all transform active:scale-125 ${
+                                                    isSelected ? 'opacity-100 scale-110' : 'opacity-50 hover:opacity-100'
+                                                }`}
+                                            >
+                                                <span className="text-2xl">{r.icon}</span>
+                                                {count > 0 && <span className="text-[10px] font-bold">{count}</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Botón Siguiente */}
+                    {hasNext && (
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onNext(); }}
+                            className="absolute right-2 md:right-8 text-white/70 hover:text-white p-3 rounded-full hover:bg-white/10 transition-all z-40"
+                        >
+                            <ChevronRight size={40} />
+                        </button>
+                    )}
+                </div>
+            );
+        };
+
         // --- APP PRINCIPAL ---
 
         const App = () => {
@@ -401,7 +551,9 @@
             const [showUpload, setShowUpload] = useState(false);
             const [showConfig, setShowConfig] = useState(false);
             const [showRules, setShowRules] = useState(false);
-            const [showViewer, setShowViewer] = useState(null);
+            
+            // Estado para el visor que ahora guarda el OBJETO foto completo, pero usaremos el índice para navegar
+            const [viewerPhotoId, setViewerPhotoId] = useState(null);
             
             // Toast Helper
             const addToast = (msg, type='info') => {
@@ -409,57 +561,61 @@
                 setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3000);
             };
 
-            // Auth Logic (MANDATORIO PARA QUE FUNCIONE EN CHAT Y EXPORT)
             useEffect(() => {
                 const initAuth = async () => {
                     if (initialAuthToken) {
-                        try {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } catch (e) {
-                            console.warn("Token inicial falló, probando anónimo", e);
-                            await signInAnonymously(auth);
-                        }
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                        try { await signInWithCustomToken(auth, initialAuthToken); } catch (e) { await signInAnonymously(auth); }
+                    } else { await signInAnonymously(auth); }
                 };
                 initAuth();
-                
-                return onAuthStateChanged(auth, u => {
-                    setUser(u);
-                });
+                return onAuthStateChanged(auth, u => setUser(u));
             }, []);
 
-            // Data Sync (Solo carga si hay usuario)
             useEffect(() => {
                 if (!user) return;
-                
-                // Cargar Fotos
                 const unsubPhotos = onSnapshot(
                     query(collection(db, 'artifacts', appId, 'public', 'data', 'workshop_photos'), orderBy('createdAt', 'desc')), 
                     s => setPhotos(s.docs.map(d => ({id: d.id, ...d.data()}))),
-                    err => console.error("Error fotos:", err)
+                    err => console.error(err)
                 );
-                
-                // Cargar Configuración (Logo, Titulo)
-                const unsubConfig = onSnapshot(
-                    doc(db, 'artifacts', appId, 'public', 'data', 'app_settings', 'theme'), 
-                    s => { if(s.exists()) setConfig(prev => ({...prev, ...s.data()})); },
-                    err => console.error("Error config:", err)
+                const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'app_settings', 'theme'), 
+                    s => { if(s.exists()) setConfig(prev => ({...prev, ...s.data()})); }
                 );
-                
                 return () => { unsubPhotos(); unsubConfig(); };
             }, [user]);
 
-            const toggleLike = async (photo) => {
+            // Lógica de Reacciones Genérica
+            const toggleReaction = async (photo, reactionType) => {
                 if(!user) return;
                 const ref = doc(db, 'artifacts', appId, 'public', 'data', 'workshop_photos', photo.id);
-                const liked = photo.likes?.includes(user.uid);
-                await updateDoc(ref, { likes: liked ? arrayRemove(user.uid) : arrayUnion(user.uid) });
+                const fieldName = reactionType.field;
+                const liked = photo[fieldName]?.includes(user.uid);
+                
+                // Objeto dinámico para actualizar solo el campo específico
+                const updateData = {};
+                updateData[fieldName] = liked ? arrayRemove(user.uid) : arrayUnion(user.uid);
+                
+                await updateDoc(ref, updateData);
             };
 
             const deletePhoto = async (id) => {
-                if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'workshop_photos', id)); setShowViewer(null); addToast("Eliminado", "success"); }
+                if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'workshop_photos', id)); setViewerPhotoId(null); addToast("Eliminado", "success"); }
+            };
+
+            // Lógica de Navegación del Visor
+            const currentPhotoIndex = photos.findIndex(p => p.id === viewerPhotoId);
+            const currentPhoto = photos[currentPhotoIndex];
+            
+            const handleNextPhoto = () => {
+                if (currentPhotoIndex < photos.length - 1) {
+                    setViewerPhotoId(photos[currentPhotoIndex + 1].id);
+                }
+            };
+            
+            const handlePrevPhoto = () => {
+                if (currentPhotoIndex > 0) {
+                    setViewerPhotoId(photos[currentPhotoIndex - 1].id);
+                }
             };
 
             // Upload Logic
@@ -475,7 +631,8 @@
                     const b64 = await compressImage(upFile);
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'workshop_photos'), {
                         imageUrl: b64, description: upDesc, photographerName: user.displayName, photographerId: user.uid,
-                        likes: [], createdAt: serverTimestamp()
+                        likes: [], // Mantener likes vacío inicial para compatibilidad
+                        createdAt: serverTimestamp()
                     });
                     addToast("Subido", "success"); setShowUpload(false); setUpFile(null); setUpPreview(null); setUpDesc('');
                 } catch(e) { console.error(e); addToast("Error al subir", "error"); } finally { setIsUp(false); }
@@ -524,16 +681,13 @@
                                 ) : (
                                     <div className="columns-2 md:columns-3 gap-4 space-y-4">
                                         {photos.map(p => (
-                                            <div key={p.id} onClick={()=>setShowViewer(p)} className="break-inside-avoid bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer">
-                                                <img src={p.imageUrl} className="w-full h-auto"/>
-                                                <div className="p-3">
-                                                    <p className="text-xs text-stone-600 line-clamp-2 italic mb-2">"{p.description}"</p>
-                                                    <div className="flex justify-between items-center text-[10px] text-red-400 font-bold uppercase">
-                                                        <span>{p.photographerName}</span>
-                                                        {p.likes?.length > 0 && <span className="flex items-center gap-1"><Heart size={10} className="fill-red-500 text-red-500"/> {p.likes.length}</span>}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <PhotoCard 
+                                                key={p.id} 
+                                                photo={p} 
+                                                user={user} 
+                                                onClick={() => setViewerPhotoId(p.id)} 
+                                                toggleReaction={toggleReaction} 
+                                            />
                                         ))}
                                     </div>
                                 )}
@@ -580,20 +734,18 @@
                             )}
 
                             {/* Viewer Modal */}
-                            {showViewer && (
-                                <div className="fixed inset-0 z-[90] bg-black flex items-center justify-center p-4" onClick={()=>setShowViewer(null)}>
-                                    <button className="absolute top-4 right-4 text-white p-2"><X size={32}/></button>
-                                    {user.uid === showViewer.photographerId && <button onClick={(e)=>{e.stopPropagation(); deletePhoto(showViewer.id)}} className="absolute top-4 left-4 text-white p-2"><Trash2/></button>}
-                                    <div className="max-w-full max-h-full overflow-y-auto text-center" onClick={e=>e.stopPropagation()}>
-                                        <img src={showViewer.imageUrl} className="max-h-[70vh] mx-auto rounded shadow-2xl"/>
-                                        <p className="text-white mt-4 font-serif italic text-xl">"{showViewer.description}"</p>
-                                        <p className="text-stone-400 text-sm mt-2 uppercase tracking-widest">{showViewer.photographerName}</p>
-                                        <button onClick={()=>toggleLike(showViewer)} className={`mt-4 px-6 py-2 rounded-full flex items-center gap-2 mx-auto ${showViewer.likes?.includes(user.uid) ? 'bg-red-600 text-white' : 'bg-white/20 text-white'}`}>
-                                            <Heart size={20} className={showViewer.likes?.includes(user.uid) ? 'fill-white' : ''}/>
-                                            {showViewer.likes?.length || 0}
-                                        </button>
-                                    </div>
-                                </div>
+                            {currentPhoto && (
+                                <ImageViewerModal 
+                                    photo={currentPhoto} 
+                                    user={user} 
+                                    onClose={() => setViewerPhotoId(null)} 
+                                    onDelete={deletePhoto}
+                                    onNext={handleNextPhoto}
+                                    onPrev={handlePrevPhoto}
+                                    hasNext={currentPhotoIndex < photos.length - 1}
+                                    hasPrev={currentPhotoIndex > 0}
+                                    toggleReaction={toggleReaction}
+                                />
                             )}
 
                             <ConfigModal isOpen={showConfig} onClose={()=>setShowConfig(false)} addToast={addToast} currentConfig={config} />
