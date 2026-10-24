@@ -1,846 +1,694 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="scroll-smooth">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mirada Terapéutica</title>
-    
-    <!-- 1. Tailwind CSS (Diseño) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. React & ReactDOM (Motor de la App) -->
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.263.1",
-        "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuestra Boda - Invitación Digital</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,600&family=Montserrat:wght@200;300;400;500;600&family=Pinyon+Script&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            gold: {
+              50: '#FAF6EE',
+              100: '#F4EBD7',
+              200: '#E9D6AF',
+              300: '#DEC287',
+              400: '#CEAA61',
+              500: '#B89243',
+              600: '#9B7830',
+              700: '#7B5E24',
+              800: '#5C441A',
+              900: '#3D2D10',
+            },
+            champagne: '#F8F5EE',
+            olive: '#586249',
+          },
+          fontFamily: {
+            serif: ['"Cormorant Garamond"', 'serif'],
+            sans: ['"Montserrat"', 'sans-serif'],
+            script: ['"Pinyon Script"', 'cursive'],
+          }
+        }
       }
     }
-    </script>
-    
-    <!-- 3. Babel -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </script>
 
-    <style>
-        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-        body {
-            background-color: #f8fafc;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-    </style>
+  <style>
+    /* Efecto de destello suave y bordes dorados sutiles */
+    .gold-gradient-text {
+      background: linear-gradient(135deg, #a67c33 0%, #c8a25d 50%, #8c6727 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .gold-border-gradient {
+      border-image: linear-gradient(to right, #e9d6af, #b89243, #e9d6af) 1;
+    }
+    /* Animación de pulso musical */
+    @keyframes musicPulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+    .music-playing {
+      animation: musicPulse 2.5s infinite ease-in-out;
+    }
+    /* Estilo de los inputs */
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(184, 146, 67, 0.35);
+    }
+  </style>
 </head>
-<body class="text-slate-800 antialiased selection:bg-rose-500 selection:text-white">
-    <div id="root"></div>
+<body class="bg-[#F2EFE9] text-stone-800 flex justify-center min-h-screen antialiased selection:bg-gold-200 selection:text-gold-900">
 
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useCallback, useRef } from 'react';
-        import { createRoot } from 'react-dom/client';
-        import { initializeApp } from 'firebase/app';
-        import { getAuth, signInAnonymously, onAuthStateChanged, updateProfile, signOut, signInWithCustomToken } from 'firebase/auth';
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, setDoc, arrayUnion, arrayRemove, onSnapshot, serverTimestamp, query, orderBy, enableIndexedDbPersistence } from 'firebase/firestore';
-        import { Camera, Send, X, QrCode, Heart, Image as ImageIcon, Loader2, WifiOff, Copy, Check, Trash2, LogOut, AlertCircle, Info, Settings, Type, Sparkles, Lock, Share2, BookOpen, ChevronLeft, ChevronRight, Timer, Play, Pause, RotateCcw, Minimize2, Palette, Lightbulb, Reply, Users, Shuffle } from 'lucide-react';
+  <!-- Contenedor Estilo Tarjeta Móvil Elegante -->
+  <main class="w-full max-w-lg bg-[#FAF8F5] shadow-2xl relative overflow-hidden border-x border-stone-200/70 pb-12">
+    
+    <!-- Botón Flotante de Música de Ambiente -->
+    <button id="musicToggleBtn" onclick="toggleAudio()" aria-label="Música de fondo"
+            class="fixed top-4 right-4 z-50 bg-white/90 backdrop-blur-md text-gold-700 border border-gold-300/80 p-3 rounded-full shadow-lg hover:bg-gold-50 transition-all duration-300 flex items-center justify-center group">
+      <!-- Icono de Sonido Sonando -->
+      <svg id="musicIconOn" class="w-5 h-5 hidden text-gold-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+      </svg>
+      <!-- Icono de Sonido Silenciado -->
+      <svg id="musicIconOff" class="w-5 h-5 text-stone-400 group-hover:text-gold-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+      </svg>
+      <span id="musicTooltip" class="absolute right-12 bg-stone-900/85 text-white text-[10px] tracking-wider py-1 px-2.5 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase">
+        Música
+      </span>
+    </button>
 
-        // --- CONFIGURACIÓN ---
-        let firebaseConfig, appId, initialAuthToken;
-        if (typeof __firebase_config !== 'undefined') {
-            firebaseConfig = JSON.parse(__firebase_config);
-            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        } else {
-            firebaseConfig = {
-                apiKey: "AIzaSyDT9M_s82TJrxwFMMFFt_M7GrQdVUFXZ2c",
-                authDomain: "plataforma-carmen-serdan.firebaseapp.com",
-                projectId: "plataforma-carmen-serdan",
-                storageBucket: "plataforma-carmen-serdan.firebasestorage.app",
-                messagingSenderId: "124079826705",
-                appId: "1:124079826705:web:5e2abd11506ae24accceb0",
-                measurementId: "G-VCYFS0K3BB"
-            };
-            appId = 'mirada-terapeutica-web'; 
-            initialAuthToken = null;
-        }
+    <!-- PORTADA / HERO -->
+    <header class="relative text-center">
+      <div class="h-[480px] w-full overflow-hidden relative">
+        <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80" 
+             alt="Novia & Novio" 
+             onerror="this.src='https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1000&q=80'"
+             class="w-full h-full object-cover object-center filter brightness-[0.92] contrast-[0.98]">
+        
+        <!-- Degradado suave y romántico -->
+        <div class="absolute inset-0 bg-gradient-to-t from-[#FAF8F5] via-[#FAF8F5]/30 to-black/40"></div>
+        
+        <!-- Marco interior decorativo sutil -->
+        <div class="absolute inset-4 border border-white/40 pointer-events-none rounded-t-3xl"></div>
+      </div>
 
-        let app, auth, db;
-        try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            enableIndexedDbPersistence(db).catch(() => {}); 
-        } catch (e) { console.error(e); }
+      <!-- Texto Superior Flotante en la Portada -->
+      <div class="absolute top-10 left-0 right-0 text-white/95 px-6">
+        <p class="font-sans text-[11px] uppercase tracking-[0.4em] font-light drop-shadow-md">Nuestra Boda</p>
+      </div>
 
-        const REACTION_MAP = [
-            { icon: '❤', field: 'likes', color: 'text-rose-600 bg-rose-50 border-rose-200 ring-1 ring-rose-200' },
-            { icon: '🤣', field: 'likes_funny', color: 'text-amber-600 bg-amber-50 border-amber-200 ring-1 ring-amber-200' },
-            { icon: '😍', field: 'likes_love', color: 'text-fuchsia-600 bg-fuchsia-50 border-fuchsia-200 ring-1 ring-fuchsia-200' },
-            { icon: '😱', field: 'likes_shock', color: 'text-cyan-600 bg-cyan-50 border-cyan-200 ring-1 ring-cyan-200' },
-            { icon: '🤡', field: 'likes_clown', color: 'text-purple-600 bg-purple-50 border-purple-200 ring-1 ring-purple-200' },
-            { icon: '🤭', field: 'likes_giggle', color: 'text-orange-600 bg-orange-50 border-orange-200 ring-1 ring-orange-200' }
-        ];
+      <!-- Título de Novios y Fecha -->
+      <div class="relative -mt-24 px-6 z-10">
+        <!-- Monograma Corona -->
+        <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-white shadow-md border border-gold-200 flex items-center justify-center text-gold-600 font-script text-2xl">
+          N & N
+        </div>
 
-        const FILTERS = {
-            normal: { name: 'Normal', filter: 'none' },
-            bw: { name: 'B/N', filter: 'grayscale(100%)' },
-            sepia: { name: 'Cálido', filter: 'sepia(60%) contrast(110%)' },
-            vivid: { name: 'Vívido', filter: 'saturate(150%) contrast(110%)' },
-            cool: { name: 'Frío', filter: 'hue-rotate(180deg) sepia(20%)' } 
-        };
+        <p class="font-sans text-[11px] uppercase tracking-[0.35em] text-gold-700 font-medium mb-1">Nos Casamos</p>
+        
+        <h1 class="font-serif text-4xl sm:text-5xl italic font-normal text-stone-900 tracking-wide leading-tight">
+          Novia <span class="text-gold-500 font-light">&amp;</span> Novio
+        </h1>
 
-        const MOODS = [
-            { label: "Calma", emoji: "😌", color: "bg-teal-100 text-teal-800 border-teal-200" },
-            { label: "Alegría", emoji: "😄", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-            { label: "Nostalgia", emoji: "🍂", color: "bg-orange-100 text-orange-800 border-orange-200" },
-            { label: "Esperanza", emoji: "🌟", color: "bg-sky-100 text-sky-800 border-sky-200" },
-            { label: "Tristeza", emoji: "💧", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
-            { label: "Gratitud", emoji: "🙏", color: "bg-rose-100 text-rose-800 border-rose-200" }
-        ];
+        <div class="flex items-center justify-center gap-3 mt-3 text-stone-500 text-xs tracking-[0.25em] uppercase font-light">
+          <span>Sábado</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-gold-400"></span>
+          <span class="font-medium text-stone-700">15 · AGOSTO · 2026</span>
+        </div>
+      </div>
+    </header>
 
-        const INSPIRATION_PROMPTS = [
-            "Busca una textura que te transmita paz.",
-            "Fotografía algo que haya cambiado con el tiempo.",
-            "Encuentra belleza en lo ordinario.",
-            "Captura un rayo de luz o una sombra interesante.",
-            "Busca el color que represente tu estado de ánimo hoy.",
-            "Fotografía algo frágil o delicado.",
-            "Encuentra un patrón en la naturaleza.",
-            "Captura un momento de silencio.",
-            "Fotografía algo que te haga sonreír.",
-            "Busca contrastes: viejo/nuevo, luz/sombra."
-        ];
+    <!-- FRASE / INTRODUCCIÓN -->
+    <section class="pt-10 pb-8 px-8 text-center">
+      <!-- Ornamento SVG divisor -->
+      <div class="flex items-center justify-center gap-3 mb-6 text-gold-400">
+        <div class="h-[1px] w-12 bg-gold-200"></div>
+        <svg class="w-4 h-4 fill-current text-gold-500" viewBox="0 0 24 24">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+        <div class="h-[1px] w-12 bg-gold-200"></div>
+      </div>
 
-        // --- 70 RETOS DE DÚO ---
-        const DUO_CHALLENGES = [
-            "Fotografía a tu pareja cuando está triste.",
-            "Haz la cara cuando te enojas con tus papás.",
-            "Tu mejor sonrisa fingida.",
-            "Cara de haber olido algo feo.",
-            "Expresión de 'se me olvidó la cartulina'.",
-            "Tu cara cuando ves a tu crush.",
-            "Fotografía cuando vas a visitar a tu suegra (cara de pánico).",
-            "Cara de no soportar a nadie hoy.",
-            "Tu expresión cuando repruebas un examen.",
-            "Tu cara cuando te dan un regalo que no te gusta.",
-            "Expresión de haber ganado la lotería.",
-            "Cara de susto extremo.",
-            "Tu mejor cara de modelo profesional.",
-            "Cara de estar aguantando la risa.",
-            "Expresión de aburrimiento total en clase.",
-            "Tu cara cuando te cuentan un chisme bueno.",
-            "Cara de dolor de estómago.",
-            "Expresión de victoria.",
-            "Tu cara de recién levantado.",
-            "Cara de haber comido limón.",
-            "Expresión de ternura máxima.",
-            "Tu cara cuando no entiendes la tarea.",
-            "Cara de 'yo no fui'.",
-            "Expresión de orgullo.",
-            "Tu cara cuando ves comida deliciosa.",
-            "Cara de confusión total.",
-            "Expresión de miedo a las alturas.",
-            "Tu cara cuando te cachan en una mentira.",
-            "Cara de estar tramando algo.",
-            "Expresión de serenidad absoluta.",
-            "Tu cara cantando tu canción favorita.",
-            "Cara de estar perdido en la ciudad.",
-            "Expresión de asco.",
-            "Tu cara cuando te pica un mosquito.",
-            "Cara de estar viendo una película de terror.",
-            "Expresión de sorpresa genuina.",
-            "Tu cara de 'te lo dije'.",
-            "Cara de estar muy cansado.",
-            "Expresión de esperanza.",
-            "Tu cara cuando te encuentras dinero.",
-            "Cara de estar regañando a alguien.",
-            "Expresión de súplica.",
-            "Tu cara de valentía.",
-            "Cara de estar congelado de frío.",
-            "Expresión de estar derritiéndose de calor.",
-            "Tu cara cuando se va el internet.",
-            "Cara de estar concentrado leyendo.",
-            "Expresión de incredulidad.",
-            "Tu cara cuando ves un perro lindo.",
-            "Cara de estar probando algo picante.",
-            "Expresión de alivio.",
-            "Tu cara de 'trágame tierra'.",
-            "Cara de estar posando para una foto familiar obligada.",
-            "Expresión de curiosidad.",
-            "Tu cara cuando te despiertan temprano.",
-            "Cara de estar planeando una broma.",
-            "Expresión de timidez.",
-            "Tu cara de locura temporal.",
-            "Cara de estar meditando.",
-            "Expresión de frustración con la tecnología.",
-            "Tu cara cuando te dicen un piropo.",
-            "Cara de estar oliendo flores.",
-            "Expresión de determinación.",
-            "Tu cara cuando te pegas en el dedo chiquito del pie.",
-            "Cara de estar viendo llover.",
-            "Expresión de nostalgia.",
-            "Tu cara de 'no me importa'.",
-            "Cara de estar escuchando música triste.",
-            "Expresión de envidia (de la buena).",
-            "Tu cara cuando por fin terminas la tarea."
-        ];
+      <p class="font-serif italic text-2xl text-stone-700 leading-relaxed max-w-sm mx-auto">
+        «El amor no se mira con los ojos, sino con el alma.»
+      </p>
+      
+      <p class="text-xs uppercase tracking-[0.25em] text-gold-700 font-semibold mt-4">
+        ¡Acompáñanos a celebrar nuestro gran día!
+      </p>
+    </section>
 
-        const ToastContainer = ({ toasts }) => (
-            <div className="fixed top-24 right-4 z-[100] flex flex-col gap-3 pointer-events-none">
-                {toasts.map(toast => (
-                    <div key={toast.id} className={`pointer-events-auto flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl backdrop-blur-md border border-white/20 text-sm font-medium animate-fade-in ${
-                        toast.type === 'error' ? 'bg-red-500/90 text-white' : 
-                        toast.type === 'success' ? 'bg-emerald-500/90 text-white' : 'bg-slate-800/90 text-white'
-                    }`}>
-                        {toast.type === 'error' ? <AlertCircle size={18}/> : <Check size={18}/>}
-                        {toast.message}
-                    </div>
-                ))}
+    <!-- CONTADOR REGRESIVO (COUNTDOWN) -->
+    <section class="py-6 px-6 mx-6 rounded-2xl bg-white border border-gold-100 shadow-sm text-center">
+      <h2 class="text-[11px] uppercase tracking-[0.3em] text-gold-700 font-medium mb-4">Faltan sólo</h2>
+      
+      <div class="grid grid-cols-4 gap-2 max-w-xs mx-auto">
+        <div class="p-2.5 rounded-xl bg-gold-50/70 border border-gold-100/60">
+          <span id="cd-days" class="block font-serif text-2xl sm:text-3xl font-semibold text-stone-800">--</span>
+          <span class="block text-[9px] uppercase tracking-wider text-stone-500 font-light mt-0.5">Días</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-gold-50/70 border border-gold-100/60">
+          <span id="cd-hours" class="block font-serif text-2xl sm:text-3xl font-semibold text-stone-800">--</span>
+          <span class="block text-[9px] uppercase tracking-wider text-stone-500 font-light mt-0.5">Horas</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-gold-50/70 border border-gold-100/60">
+          <span id="cd-minutes" class="block font-serif text-2xl sm:text-3xl font-semibold text-stone-800">--</span>
+          <span class="block text-[9px] uppercase tracking-wider text-stone-500 font-light mt-0.5">Min</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-gold-50/70 border border-gold-100/60">
+          <span id="cd-seconds" class="block font-serif text-2xl sm:text-3xl font-semibold text-gold-600">--</span>
+          <span class="block text-[9px] uppercase tracking-wider text-stone-500 font-light mt-0.5">Seg</span>
+        </div>
+      </div>
+
+      <!-- Botón Agregar a Calendario -->
+      <div class="mt-5">
+        <button onclick="addToCalendar()" 
+                class="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-gold-300 text-gold-800 bg-white hover:bg-gold-50 transition text-xs font-medium tracking-wider shadow-sm">
+          <svg class="w-4 h-4 text-gold-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          Agendar en Calendario
+        </button>
+      </div>
+    </section>
+
+    <!-- PADRINOS DE HONOR -->
+    <section class="py-8 px-6 text-center">
+      <h2 class="text-[11px] tracking-[0.3em] text-stone-500 uppercase font-semibold mb-4">Con la bendición de nuestros padrinos</h2>
+      
+      <div class="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-sm relative overflow-hidden">
+        <div class="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-gold-50 pointer-events-none"></div>
+        <div class="absolute -bottom-6 -left-6 w-16 h-16 rounded-full bg-gold-50 pointer-events-none"></div>
+
+        <p class="text-xs uppercase tracking-widest text-gold-600 font-light mb-1">Padrinos de Velación</p>
+        <p class="font-serif text-2xl sm:text-3xl font-medium text-stone-800">Oscar Pérez</p>
+        <p class="text-gold-400 font-script text-2xl my-0.5">&amp;</p>
+        <p class="font-serif text-2xl sm:text-3xl font-medium text-stone-800">Marina Velázquez</p>
+      </div>
+    </section>
+
+    <!-- DÓNDE & CUÁNDO (ITINERARIO) -->
+    <section class="py-6 px-6 space-y-6">
+      <div class="text-center">
+        <p class="text-xs uppercase tracking-[0.3em] text-gold-600 font-medium">Itinerario</p>
+        <h2 class="font-serif text-3xl italic text-stone-900 mt-1">Dónde &amp; Cuándo</h2>
+      </div>
+
+      <!-- Tarjeta 1: Ceremonia -->
+      <div class="bg-white p-6 rounded-2xl border border-stone-200/80 text-center shadow-sm relative hover:shadow-md transition">
+        <div class="w-14 h-14 mx-auto mb-4 flex items-center justify-center rounded-full bg-gold-50 border border-gold-200 text-gold-700">
+          <!-- Icono Iglesia -->
+          <svg class="w-7 h-7 stroke-current" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M12 2v4m-2-2h4M4 22h16M7 22V10l5-4 5 4v12M10 22v-5a2 2 0 014 0v5"/>
+          </svg>
+        </div>
+        <h3 class="font-serif text-2xl font-semibold text-stone-800">Ceremonia Religiosa</h3>
+        <p class="text-sm text-gold-700 mt-1 font-semibold tracking-wide">5:00 PM</p>
+        <p class="text-base text-stone-700 font-serif italic mt-1">Parroquia de San Andrés</p>
+        <p class="text-xs text-stone-500 mt-1">Calle Principal #123, Centro Histórico</p>
+
+        <div class="mt-5 flex justify-center gap-3">
+          <a href="https://maps.google.com/?q=Parroquia+San+Andres" target="_blank" rel="noopener noreferrer"
+             class="inline-flex items-center gap-1.5 px-5 py-2.5 text-xs uppercase font-semibold tracking-wider text-gold-900 bg-gold-100/90 hover:bg-gold-200 rounded-full transition shadow-sm">
+            <svg class="w-4 h-4 text-gold-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Ver en Google Maps
+          </a>
+        </div>
+      </div>
+
+      <!-- Tarjeta 2: Recepción -->
+      <div class="bg-white p-6 rounded-2xl border border-stone-200/80 text-center shadow-sm relative hover:shadow-md transition">
+        <div class="w-14 h-14 mx-auto mb-4 flex items-center justify-center rounded-full bg-gold-50 border border-gold-200 text-gold-700">
+          <!-- Icono Copas de Brindis -->
+          <svg class="w-7 h-7 text-gold-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M16 4v4a4 4 0 01-4 4M8 4v4a4 4 0 004 4m0 0v8m-4 0h8M6 4h4m4 0h4"/>
+          </svg>
+        </div>
+        <h3 class="font-serif text-2xl font-semibold text-stone-800">Recepción &amp; Banquete</h3>
+        <p class="text-sm text-gold-700 mt-1 font-semibold tracking-wide">7:00 PM (Posterior a la Misa)</p>
+        <p class="text-base text-stone-700 font-serif italic mt-1">Salón &amp; Jardín Ranchito</p>
+        <p class="text-xs text-stone-500 mt-1">Av. Las Haciendas #450</p>
+
+        <div class="mt-5 flex justify-center gap-3">
+          <a href="https://maps.google.com/?q=Salon+Ranchito" target="_blank" rel="noopener noreferrer"
+             class="inline-flex items-center gap-1.5 px-5 py-2.5 text-xs uppercase font-semibold tracking-wider text-gold-900 bg-gold-100/90 hover:bg-gold-200 rounded-full transition shadow-sm">
+            <svg class="w-4 h-4 text-gold-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Ver en Google Maps
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CRONOGRAMA RÁPIDO DEL EVENTO -->
+    <section class="py-6 px-6">
+      <div class="bg-gold-50/50 p-6 rounded-2xl border border-gold-200/60">
+        <h3 class="text-center font-serif text-xl italic text-stone-800 mb-4">Línea del Tiempo</h3>
+        <div class="relative border-l-2 border-gold-200 ml-4 pl-4 space-y-4 text-left">
+          
+          <div class="relative">
+            <div class="absolute -left-[23px] top-1.5 w-3 h-3 bg-gold-500 rounded-full border-2 border-white"></div>
+            <p class="text-xs font-semibold text-gold-800 tracking-wider">17:00 HRS</p>
+            <p class="text-sm font-serif font-medium text-stone-800">Ceremonia Religiosa</p>
+          </div>
+
+          <div class="relative">
+            <div class="absolute -left-[23px] top-1.5 w-3 h-3 bg-gold-500 rounded-full border-2 border-white"></div>
+            <p class="text-xs font-semibold text-gold-800 tracking-wider">18:30 HRS</p>
+            <p class="text-sm font-serif font-medium text-stone-800">Cóctel de Bienvenida</p>
+          </div>
+
+          <div class="relative">
+            <div class="absolute -left-[23px] top-1.5 w-3 h-3 bg-gold-500 rounded-full border-2 border-white"></div>
+            <p class="text-xs font-semibold text-gold-800 tracking-wider">19:30 HRS</p>
+            <p class="text-sm font-serif font-medium text-stone-800">Cena y Brindis</p>
+          </div>
+
+          <div class="relative">
+            <div class="absolute -left-[23px] top-1.5 w-3 h-3 bg-gold-500 rounded-full border-2 border-white"></div>
+            <p class="text-xs font-semibold text-gold-800 tracking-wider">21:00 HRS</p>
+            <p class="text-sm font-serif font-medium text-stone-800">Apertura de Pista &amp; Fiesta</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- CÓDIGO DE VESTIMENTA -->
+    <section class="py-8 px-6 text-center border-t border-stone-200/60">
+      <div class="w-12 h-12 mx-auto mb-3 flex items-center justify-center rounded-full bg-stone-100 text-stone-700">
+        <!-- Icono Corbata/Vestido -->
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M12 2l3 5-3 5-3-5 3-5zm0 10l2 10H10l2-10z"/>
+        </svg>
+      </div>
+
+      <h3 class="text-xs uppercase tracking-[0.25em] text-stone-500 font-semibold mb-2">Código de Vestimenta</h3>
+      <p class="font-serif text-2xl italic text-stone-800 font-medium">Rigurosa Etiqueta / Formal</p>
+      
+      <p class="text-xs text-stone-500 mt-2 max-w-xs mx-auto">
+        Mujeres: Vestido largo de noche.<br>Hombres: Traje formal o esmoquin.
+      </p>
+
+      <!-- Paleta de Inspiración -->
+      <div class="mt-4 flex flex-col items-center">
+        <p class="text-[11px] text-stone-400 uppercase tracking-widest mb-2 font-medium">Paleta Sugerida</p>
+        <div class="flex gap-2">
+          <div class="w-7 h-7 rounded-full bg-[#1C2833] border border-stone-200 shadow-inner" title="Azul Profundo"></div>
+          <div class="w-7 h-7 rounded-full bg-[#4A5568] border border-stone-200 shadow-inner" title="Gris Carbón"></div>
+          <div class="w-7 h-7 rounded-full bg-[#5D6D50] border border-stone-200 shadow-inner" title="Verde Olivo"></div>
+          <div class="w-7 h-7 rounded-full bg-[#8E5B59] border border-stone-200 shadow-inner" title="Terracota"></div>
+          <div class="w-7 h-7 rounded-full bg-[#C2A374] border border-stone-200 shadow-inner" title="Champagne"></div>
+        </div>
+      </div>
+
+      <div class="mt-5 inline-block bg-amber-50 border border-amber-200/80 px-4 py-2 rounded-xl">
+        <p class="text-xs text-amber-800 font-medium">
+          ✨ Agradecemos reservar el color <strong>blanco y marfil</strong> para la novia.
+        </p>
+      </div>
+    </section>
+
+    <!-- MESA DE REGALOS / LLUVIA DE SOBRES -->
+    <section class="py-8 px-6 bg-stone-100/60 border-t border-b border-stone-200/60 text-center">
+      <div class="w-12 h-12 mx-auto mb-3 flex items-center justify-center rounded-full bg-gold-100 text-gold-700">
+        <!-- Icono Regalo -->
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M20 12v10H4V12m16 0H4m16 0a2 2 0 00-2-2h-3.5a2.5 2.5 0 00-5 0V10H4a2 2 0 00-2 2m18 0a2 2 0 01-2 2H4a2 2 0 01-2-2m6-2V4a2 2 0 012-2h0a2 2 0 012 2v6m-4 0h4"/>
+        </svg>
+      </div>
+
+      <h3 class="text-xs uppercase tracking-[0.25em] text-gold-700 font-semibold mb-1">Mesa de Regalos</h3>
+      <p class="font-serif text-2xl italic text-stone-800">Su presencia es nuestro mejor regalo</p>
+      <p class="text-xs text-stone-500 mt-2 max-w-sm mx-auto leading-relaxed">
+        Si desean hacernos un presente, ponemos a su disposición las siguientes opciones para ayudarnos a comenzar nuestro nuevo hogar:
+      </p>
+
+      <div class="mt-6 space-y-3 max-w-sm mx-auto">
+        <!-- Opción 1: Sobre el día del evento -->
+        <div class="bg-white p-4 rounded-xl border border-stone-200 text-left flex items-start gap-3">
+          <span class="text-xl">✉️</span>
+          <div>
+            <p class="text-xs font-semibold text-stone-800">Lluvia de Sobres</p>
+            <p class="text-xs text-stone-500">Tendremos un buzón especial en la recepción para depositar sus buenos deseos.</p>
+          </div>
+        </div>
+
+        <!-- Opción 2: Transferencia Bancaria interactiva -->
+        <div class="bg-white p-4 rounded-xl border border-stone-200 text-left">
+          <div class="flex items-start gap-3 mb-3">
+            <span class="text-xl">💳</span>
+            <div>
+              <p class="text-xs font-semibold text-stone-800">Transferencia Bancaria</p>
+              <p class="text-xs text-stone-500">BBVA Bancomer</p>
+              <p class="text-xs text-stone-600 mt-1">Beneficiario: <strong>Novia &amp; Novio</strong></p>
+              <p class="text-xs text-stone-700 font-mono mt-0.5" id="clabeNumber">012180015555555555</p>
             </div>
-        );
+          </div>
+          
+          <button onclick="copyToClipboard('012180015555555555', 'CLABE copiada al portapapeles')"
+                  class="w-full py-2 px-3 text-xs font-medium text-gold-800 bg-gold-50 hover:bg-gold-100 border border-gold-200 rounded-lg flex items-center justify-center gap-1.5 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
+            </svg>
+            Copiar Cuenta CLABE
+          </button>
+        </div>
+      </div>
+    </section>
 
-        const processImage = (file, filterType = 'normal') => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.src = e.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        // AJUSTE IMPORTANTE: Reducimos el tamaño máximo a 700px para asegurar que pese menos de 1MB
-                        const maxWidth = 700; 
-                        let { width, height } = img;
-                        if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } }
-                        else { if (height > maxWidth) { width *= maxWidth / height; height = maxWidth; } }
-                        canvas.width = width; canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        if (filterType !== 'normal') ctx.filter = FILTERS[filterType].filter;
-                        ctx.drawImage(img, 0, 0, width, height);
-                        // AJUSTE IMPORTANTE: Calidad JPEG a 0.6
-                        resolve(canvas.toDataURL('image/jpeg', 0.6));
-                    };
-                    img.onerror = reject;
-                };
-                reader.onerror = reject;
-            });
-        };
+    <!-- FORMULARIO INTERACTIVO DE CONFIRMACIÓN (RSVP) -->
+    <section class="py-10 px-6 bg-stone-900 text-white text-center relative overflow-hidden" id="rsvp-section">
+      <!-- Toque dorado decorativo -->
+      <div class="absolute -top-12 -right-12 w-32 h-32 bg-gold-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
-        const Stopwatch = () => {
-            const [time, setTime] = useState(0);
-            const [isRunning, setIsRunning] = useState(false);
-            const [isExpanded, setIsExpanded] = useState(false);
+      <p class="text-xs uppercase tracking-[0.3em] text-gold-400 font-medium">R.S.V.P.</p>
+      <h3 class="font-serif text-3xl italic mt-1 mb-2">Confirmar Asistencia</h3>
+      
+      <p class="text-xs text-stone-300 font-light max-w-xs mx-auto mb-6 leading-relaxed">
+        Agradecemos confirmar antes del <strong class="text-gold-200">15 de Julio de 2026</strong> para reservar su lugar en nuestro banquete.
+      </p>
 
-            useEffect(() => {
-                let interval;
-                if (isRunning) interval = setInterval(() => setTime(t => t + 1), 1000);
-                return () => clearInterval(interval);
-            }, [isRunning]);
+      <form id="rsvpForm" onsubmit="handleRsvpSubmit(event)" class="space-y-4 max-w-sm mx-auto text-left">
+        
+        <!-- Nombre de invitado -->
+        <div>
+          <label class="block text-[11px] font-medium text-stone-300 uppercase tracking-wider mb-1">Nombre Completo *</label>
+          <input type="text" id="guestName" required placeholder="Ej. Familia Pérez Velázquez"
+                 class="w-full px-4 py-2.5 rounded-xl bg-stone-800 border border-stone-700 text-stone-100 text-sm placeholder:text-stone-500">
+        </div>
 
-            const formatTime = (seconds) => {
-                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-                const s = (seconds % 60).toString().padStart(2, '0');
-                return `${m}:${s}`;
-            };
+        <!-- Confirmación de Asistencia -->
+        <div>
+          <label class="block text-[11px] font-medium text-stone-300 uppercase tracking-wider mb-1">¿Podrás acompañarnos? *</label>
+          <select id="guestAttendance" required onchange="toggleGuestCount(this.value)"
+                  class="w-full px-4 py-2.5 rounded-xl bg-stone-800 border border-stone-700 text-stone-100 text-sm">
+            <option value="si">¡Sí, asistiré con mucho gusto!</option>
+            <option value="no">Lamentablemente no podré asistir</option>
+          </select>
+        </div>
 
-            if (!isExpanded) {
-                return (
-                    <button onClick={() => setIsExpanded(true)} className="fixed bottom-6 left-6 z-40 bg-white/90 backdrop-blur-md text-slate-700 p-4 rounded-full shadow-2xl flex items-center gap-2 hover:scale-105 transition-all border border-slate-200/50 hover:border-fuchsia-300 group">
-                        <Timer size={24} className="group-hover:text-fuchsia-600 transition-colors" />
-                        {time > 0 && <span className="font-bold font-mono text-sm text-slate-900">{formatTime(time)}</span>}
-                    </button>
-                );
-            }
+        <!-- Número de Personas -->
+        <div id="guestCountWrapper">
+          <label class="block text-[11px] font-medium text-stone-300 uppercase tracking-wider mb-1">Número de Asistentes</label>
+          <select id="guestCount" class="w-full px-4 py-2.5 rounded-xl bg-stone-800 border border-stone-700 text-stone-100 text-sm">
+            <option value="1">1 Persona</option>
+            <option value="2" selected>2 Personas</option>
+            <option value="3">3 Personas</option>
+            <option value="4">4 Personas</option>
+          </select>
+        </div>
 
-            return (
-                <div className="fixed inset-0 z-[120] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-fade-in">
-                    <div className="flex flex-col items-center w-full max-w-lg text-center">
-                        <div className="text-slate-400 font-medium tracking-widest uppercase text-sm mb-8">Tiempo de Actividad</div>
-                        <div className="text-white font-mono text-9xl font-bold mb-12 drop-shadow-[0_0_30px_rgba(255,255,255,0.2)] tabular-nums tracking-widest bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400">{formatTime(time)}</div>
-                        <div className="flex gap-8 mb-16">
-                            <button onClick={() => setIsRunning(!isRunning)} className="bg-white text-slate-900 p-8 rounded-full shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:scale-110 active:scale-95 transition-all duration-300 hover:shadow-[0_0_60px_rgba(255,255,255,0.2)]">
-                                {isRunning ? <Pause size={48} fill="currentColor" /> : <Play size={48} fill="currentColor" className="ml-2" />}
-                            </button>
-                            <button onClick={() => { setIsRunning(false); setTime(0); }} className="bg-slate-800 text-white p-8 rounded-full border border-slate-700 hover:bg-rose-600 hover:border-rose-500 active:scale-95 transition-all duration-300">
-                                <RotateCcw size={48} />
-                            </button>
-                        </div>
-                        <button onClick={() => setIsExpanded(false)} className="text-white/60 hover:text-white flex items-center gap-2 py-3 px-6 rounded-full hover:bg-white/10 transition-colors">
-                            <Minimize2 size={20} /> Minimizar
-                        </button>
-                    </div>
-                </div>
-            );
-        };
+        <!-- Mensaje o felicitación -->
+        <div>
+          <label class="block text-[11px] font-medium text-stone-300 uppercase tracking-wider mb-1">Mensaje para los Novios (Opcional)</label>
+          <textarea id="guestMessage" rows="2" placeholder="¡Muchas felicidades en esta nueva etapa!"
+                    class="w-full px-4 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-100 text-sm placeholder:text-stone-500"></textarea>
+        </div>
 
-        const InspirationModal = ({ isOpen, onClose }) => {
-            const [prompt, setPrompt] = useState("");
-            useEffect(() => { if(isOpen) setPrompt(INSPIRATION_PROMPTS[Math.floor(Math.random() * INSPIRATION_PROMPTS.length)]); }, [isOpen]);
-            if (!isOpen) return null;
-            return ( <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}> <div className="bg-white rounded-[2rem] max-w-md w-full shadow-2xl overflow-hidden flex flex-col p-8 text-center relative" onClick={e => e.stopPropagation()}> <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-rose-400 to-fuchsia-500"></div> <div className="mb-6 flex justify-center"> <div className="bg-yellow-100 p-4 rounded-full shadow-inner"> <Lightbulb size={40} className="text-yellow-600 fill-yellow-600 animate-pulse" /> </div> </div> <h3 className="text-slate-900 font-bold text-xl mb-4">Tu Reto de Hoy</h3> <p className="text-slate-600 text-lg font-medium leading-relaxed mb-8">"{prompt}"</p> <div className="flex gap-3"> <button onClick={() => setPrompt(INSPIRATION_PROMPTS[Math.floor(Math.random() * INSPIRATION_PROMPTS.length)])} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50">Otro Reto</button> <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-medium hover:bg-black">Aceptar</button> </div> </div> </div> );
-        };
+        <!-- Botón de Envío vía WhatsApp -->
+        <button type="submit" 
+                class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm rounded-xl tracking-wider shadow-lg transition flex items-center justify-center gap-2 mt-4">
+          <!-- Icono WhatsApp -->
+          <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+            <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.199.534 1.286.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.071.376-.044.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564c.173.087.289.129.332.202.043.073.043.419-.101.824z"/>
+          </svg>
+          Confirmar vía WhatsApp
+        </button>
+      </form>
 
-        // ... [LoginScreen, ConfigModal, RulesModal codes remain identical to previous versions, just injecting into final assembly] ...
-        const LoginScreen = ({ onLogin, addToast, config, currentUser, onShowRules }) => {
-            const [name, setName] = useState(currentUser?.displayName || '');
-            const [loading, setLoading] = useState(false);
-            const [showLoginQR, setShowLoginQR] = useState(false);
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                if (!name.trim()) return;
-                setLoading(true);
-                try {
-                    if (auth.currentUser) { await updateProfile(auth.currentUser, { displayName: name }); onLogin(); } 
-                    else {
-                        if (initialAuthToken) try { await signInWithCustomToken(auth, initialAuthToken); } catch (err) { await signInAnonymously(auth); }
-                        else await signInAnonymously(auth);
-                        if (auth.currentUser) { await updateProfile(auth.currentUser, { displayName: name }); onLogin(); }
-                    }
-                } catch (error) { addToast("Error de conexión.", "error"); } finally { setLoading(false); }
-            };
-            const handleShare = () => {
-                const url = window.location.href;
-                if (navigator.share) navigator.share({ title: config.title, url }).catch(()=>{});
-                else { navigator.clipboard.writeText(url).then(() => addToast("Copiado", "success")).catch(() => addToast("Error al copiar", "error")); }
-            };
-            return (
-                <div className="min-h-screen flex items-center justify-center p-6 relative z-10 overflow-hidden">
-                    <div className="bg-white/80 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-10 w-full max-w-md text-center border border-white/60 animate-fade-in relative z-10">
-                        <div className="w-32 h-32 mx-auto mb-8 flex items-center justify-center relative group">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-red-500 to-rose-500 rounded-full blur-2xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
-                            <div className="relative z-10 w-full h-full p-2">
-                                {config.backgroundUrl ? ( <img src={config.backgroundUrl} className="w-full h-full object-contain drop-shadow-xl" alt="Logo"/> ) : ( <div className="w-full h-full rounded-3xl bg-gradient-to-br from-red-600 to-rose-600 flex items-center justify-center text-white"><Camera size={48} /></div> )}
-                            </div>
-                        </div>
-                        <h1 className="text-4xl font-black text-slate-800 mb-3 tracking-tight">{config.title || 'Mirada Terapéutica'}</h1>
-                        <p className="text-slate-500 mb-10 text-base font-medium">{config.subtitle || 'Espacio seguro.'}</p>
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            <input type="text" placeholder="¿Cómo te llamas?" value={name} onChange={e => setName(e.target.value)} className="w-full px-6 py-4.5 rounded-2xl border border-slate-200 bg-white/80 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 text-center text-lg font-medium transition-all text-slate-800" required />
-                            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold py-4.5 rounded-2xl shadow-xl shadow-rose-500/20 flex items-center justify-center gap-3 active:scale-[0.98] transition-all">
-                                {loading ? <Loader2 className="animate-spin"/> : <><span>Ingresar</span> <ChevronRight size={18} opacity={0.8}/></>}
-                            </button>
-                        </form>
-                        <div className="flex flex-wrap justify-center gap-3 mt-10">
-                            <button onClick={onShowRules} className="text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 flex items-center justify-center gap-2 py-2.5 px-5 rounded-full w-full mb-1 border border-rose-100"><BookOpen size={16} /> Reglas del Taller</button>
-                            <div className="flex gap-3 w-full justify-center">
-                                <button onClick={handleShare} className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2 py-2.5 px-5 rounded-full hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200"><Share2 size={16} /> Compartir</button>
-                                <button onClick={() => setShowLoginQR(true)} className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2 py-2.5 px-5 rounded-full hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200"><QrCode size={16} /> QR</button>
-                            </div>
-                        </div>
-                    </div>
-                    {showLoginQR && ( <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowLoginQR(false)}> <div className="bg-white p-8 rounded-[2rem] max-w-sm w-full text-center shadow-2xl" onClick={e => e.stopPropagation()}> <h3 className="font-bold text-2xl mb-6 text-slate-800">Escanea para entrar</h3> <div className="bg-white p-4 border-2 border-dashed border-slate-200 rounded-3xl inline-block mb-8 shadow-sm"> <img src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.href)}`} alt="QR" className="w-56 h-56 mix-blend-multiply" /> </div> <button onClick={() => setShowLoginQR(false)} className="w-full py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm">Cerrar</button> </div> </div> )}
-                </div>
-            );
-        };
+      <p class="text-[10px] text-stone-400 mt-8 tracking-[0.25em] uppercase">¡Esperamos contar con tu compañía!</p>
+      <p class="text-xs font-serif italic text-gold-400 mt-1">#BodaNoviaYNovio2026</p>
+    </section>
 
-        const ConfigModal = ({ isOpen, onClose, addToast, currentConfig }) => {
-            const [file, setFile] = useState(null);
-            const [preview, setPreview] = useState(null);
-            const [title, setTitle] = useState('');
-            const [subtitle, setSubtitle] = useState('');
-            const [loading, setLoading] = useState(false);
-            const [authAdmin, setAuthAdmin] = useState(false);
-            const [u, setU] = useState(''); const [p, setP] = useState('');
-            useEffect(() => { if (isOpen) { setPreview(currentConfig.backgroundUrl); setTitle(currentConfig.title); setSubtitle(currentConfig.subtitle); setAuthAdmin(false); setU(''); setP(''); } }, [isOpen]);
-            const handleSave = async () => { if (!auth.currentUser) return; setLoading(true); try { let url = currentConfig.backgroundUrl; if (file) url = await processImage(file, 'normal'); await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'app_settings', 'theme'), { backgroundUrl: url, title, subtitle, updatedAt: serverTimestamp() }, { merge: true }); addToast("Guardado", "success"); onClose(); } catch(e) { addToast("Error", "error"); } finally { setLoading(false); } };
-            const handleLogin = (e) => { e.preventDefault(); if (u === 'ADMIN' && p === 'ADMIN123') { setAuthAdmin(true); addToast("Acceso correcto", "success"); } else addToast("Credenciales incorrectas", "error"); };
-            if (!isOpen) return null;
-            return ( <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-fade-in"> <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-white/50"> <div className="flex justify-between p-6 border-b border-slate-100 bg-slate-50/50"> <h3 className="text-xl font-bold text-slate-800">{authAdmin ? 'Personalizar' : 'Admin'}</h3> <button onClick={onClose}><X size={20}/></button> </div> {!authAdmin ? ( <form onSubmit={handleLogin} className="p-10 flex flex-col gap-5 text-center"> <Lock className="w-10 h-10 text-slate-400 mx-auto mb-2"/> <input type="text" placeholder="Usuario" value={u} onChange={e=>setU(e.target.value)} className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-center"/> <input type="password" placeholder="Contraseña" value={p} onChange={e=>setP(e.target.value)} className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-center"/> <button className="bg-slate-900 text-white py-4 rounded-xl font-bold">Entrar</button> </form> ) : ( <div className="p-8 space-y-8 overflow-y-auto"> <input value={title} onChange={e=>setTitle(e.target.value)} className="w-full p-4 bg-slate-50 rounded-xl border border-slate-200" placeholder="Título"/> <textarea value={subtitle} onChange={e=>setSubtitle(e.target.value)} className="w-full p-4 bg-slate-50 rounded-xl border border-slate-200 h-24" placeholder="Subtítulo"/> <label className="block w-full h-40 border-2 border-dashed border-slate-300 rounded-2xl flex items-center justify-center cursor-pointer relative bg-slate-50"> {preview ? <img src={preview} className="h-full object-contain p-4"/> : <ImageIcon size={32} className="text-slate-300"/>} <input type="file" className="hidden" onChange={e => { const f = e.target.files[0]; if(f) { setFile(f); const r = new FileReader(); r.onload=()=>setPreview(r.result); r.readAsDataURL(f); } }}/> </label> <button onClick={handleSave} disabled={loading} className="w-full bg-rose-600 text-white py-4 rounded-xl font-bold">Guardar</button> </div> )} </div> </div> );
-        };
+  </main>
 
-        const RulesModal = ({ isOpen, onClose }) => { if (!isOpen) return null; return ( <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}> <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}> <div className="p-6 bg-gradient-to-r from-rose-700 to-fuchsia-700 text-white flex justify-between items-center"> <h3 className="font-bold text-lg">Reglas</h3> <button onClick={onClose}><X size={20}/></button> </div> <div className="p-8 space-y-4 overflow-y-auto text-slate-600"> <p>1. Espacio Seguro</p> <p>2. Autenticidad</p> <p>3. Confidencialidad</p> </div> <div className="p-6 border-t"><button onClick={onClose} className="bg-slate-900 text-white w-full py-3 rounded-xl">Entendido</button></div> </div> </div> ); };
+  <!-- MENSAJE TOAST PERSONALIZADO (Evita usar alert) -->
+  <div id="toastNotification" 
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-stone-900/95 border border-gold-400/50 text-white text-xs px-5 py-3 rounded-xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center gap-2">
+    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    </svg>
+    <span id="toastMessage">Texto copiado</span>
+  </div>
 
-        const DuoUploadModal = ({ isOpen, onClose, userId, userName, addToast }) => {
-            const [step, setStep] = useState(1);
-            const [challengeA, setChallengeA] = useState('');
-            const [photoA, setPhotoA] = useState(null);
-            const [challengeB, setChallengeB] = useState('');
-            const [photoB, setPhotoB] = useState(null);
-            const [uploading, setUploading] = useState(false);
+  <!-- SCRIPT DE LÓGICA E INTERACTIVIDAD -->
+  <script>
+    /* ========================================================
+       1. CUENTA REGRESIVA PARA LA BODA (15 de Agosto de 2026)
+       ======================================================== */
+    const weddingDate = new Date('August 15, 2026 17:00:00').getTime();
 
-            useEffect(() => {
-                if (isOpen) {
-                    setStep(1); setChallengeA(''); setPhotoA(null); setChallengeB(''); setPhotoB(null); setUploading(false);
-                }
-            }, [isOpen]);
+    function updateCountdown() {
+      const now = new Date().getTime();
+      const difference = weddingDate - now;
 
-            const generateChallenge = (isA) => {
-                const random = DUO_CHALLENGES[Math.floor(Math.random() * DUO_CHALLENGES.length)];
-                if (isA) setChallengeA(random); else setChallengeB(random);
-            };
+      const daysEl = document.getElementById('cd-days');
+      const hoursEl = document.getElementById('cd-hours');
+      const minutesEl = document.getElementById('cd-minutes');
+      const secondsEl = document.getElementById('cd-seconds');
 
-            const handleFile = (e, isA) => {
-                const f = e.target.files[0];
-                if (f) {
-                    if (f.size > 25 * 1024 * 1024) { addToast("Imagen muy grande", "error"); return; }
-                    const r = new FileReader();
-                    r.onload = () => isA ? setPhotoA(r.result) : setPhotoB(r.result);
-                    r.readAsDataURL(f);
-                }
-            };
+      if (difference <= 0) {
+        daysEl.textContent = '00';
+        hoursEl.textContent = '00';
+        minutesEl.textContent = '00';
+        secondsEl.textContent = '00';
+        return;
+      }
 
-            const handleFinalUpload = async () => {
-                setUploading(true);
-                try {
-                    // Process images to ensure size compliance
-                    const finalA = await processImage(dataURLtoFile(photoA, "imgA.jpg"));
-                    const finalB = await processImage(dataURLtoFile(photoB, "imgB.jpg"));
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'workshop_photos'), {
-                        type: 'duo',
-                        imgA: finalA, challengeA,
-                        imgB: finalB, challengeB,
-                        photographerName: userName, photographerId: userId,
-                        likes: [], likes_funny: [], likes_love: [], likes_shock: [], likes_clown: [], likes_giggle: [],
-                        createdAt: serverTimestamp(),
-                        description: "Reto Dúo Completado" // Generic description for listing
-                    });
-                    addToast("¡Reto Dúo compartido!", "success");
-                    onClose();
-                } catch (e) { console.error(e); addToast("Error al subir. Intenta de nuevo.", "error"); }
-                finally { setUploading(false); }
-            };
-            
-            // Helper to convert dataURL back to file for processing
-            const dataURLtoFile = (dataurl, filename) => {
-                let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-                    bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-                while(n--){ u8arr[n] = bstr.charCodeAt(n); }
-                return new File([u8arr], filename, {type:mime});
-            }
+      daysEl.textContent = days < 10 ? '0' + days : days;
+      hoursEl.textContent = hours < 10 ? '0' + hours : hours;
+      minutesEl.textContent = minutes < 10 ? '0' + minutes : minutes;
+      secondsEl.textContent = seconds < 10 ? '0' + seconds : seconds;
+    }
 
-            if (!isOpen) return null;
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
 
-            return (
-                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[80] flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-white/50">
-                        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <div className="flex items-center gap-2">
-                                {step > 1 && (
-                                    <button onClick={() => setStep(1)} className="p-1 hover:bg-slate-200 rounded-full mr-2 transition-colors">
-                                        <ChevronLeft size={24} className="text-slate-600" />
-                                    </button>
-                                )}
-                                <h3 className="font-bold text-lg text-indigo-800 flex items-center gap-2">
-                                    <Users size={20}/> Reto de Dúos - Paso {step < 3 ? '1 (Jugador A)' : '2 (Jugador B)'}
-                                </h3>
-                            </div>
-                            <button onClick={onClose} className="p-2 hover:bg-red-100 hover:text-red-600 rounded-full transition-colors" title="Salir">
-                                <X size={24}/>
-                            </button>
-                        </div>
-                        
-                        <div className="flex-1 p-6 overflow-y-auto bg-slate-50/30">
-                            <div className="flex flex-col md:flex-row gap-6 h-full">
-                                {/* CARD JUGADOR A */}
-                                <div className={`flex-1 bg-white p-6 rounded-3xl shadow-sm border-2 ${step >= 3 ? 'border-green-200 opacity-50' : 'border-indigo-100'}`}>
-                                    <h4 className="font-bold text-slate-400 text-xs uppercase tracking-widest mb-4">Jugador 1</h4>
-                                    
-                                    {!photoA ? (
-                                        <>
-                                            <div className="bg-indigo-50 p-6 rounded-2xl mb-6 text-center min-h-[120px] flex items-center justify-center">
-                                                {challengeA ? <p className="text-indigo-900 font-bold text-lg">"{challengeA}"</p> : <p className="text-indigo-300">Genera un reto para comenzar</p>}
-                                            </div>
-                                            <button onClick={()=>generateChallenge(true)} className="w-full py-3 rounded-xl border-2 border-indigo-100 text-indigo-600 font-bold mb-4 hover:bg-indigo-50 transition-colors">GENERAR RETO</button>
-                                            
-                                            {challengeA && (
-                                                <label className="block w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-center cursor-pointer hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
-                                                    <Camera className="inline mr-2" size={20}/> CAPTURAR
-                                                    <input type="file" className="hidden" accept="image/*" capture="environment" onChange={(e)=>handleFile(e, true)}/>
-                                                </label>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="relative rounded-2xl overflow-hidden">
-                                            <img src={photoA} className="w-full h-48 object-cover"/>
-                                            <div className="absolute bottom-0 w-full bg-black/60 p-2 text-white text-xs text-center backdrop-blur-sm">
-                                                {challengeA}
-                                            </div>
-                                            {step < 3 && <button onClick={()=>setStep(3)} className="absolute inset-0 bg-black/20 flex items-center justify-center text-white font-bold text-xl backdrop-blur-sm hover:bg-black/10 transition-colors">Siguiente Turno →</button>}
-                                        </div>
-                                    )}
-                                </div>
+    /* ========================================================
+       2. REPRODUCTOR DE MÚSICA AMBIENTAL (Web Audio API)
+       Crea una armonía nupcial etérea sin depender de MP3s rotos
+       ======================================================== */
+    let audioCtx = null;
+    let isPlaying = false;
+    let melodyInterval = null;
 
-                                {/* CARD JUGADOR B */}
-                                <div className={`flex-1 bg-white p-6 rounded-3xl shadow-sm border-2 ${step < 3 ? 'border-slate-100 opacity-50 pointer-events-none' : 'border-fuchsia-100'}`}>
-                                    <h4 className="font-bold text-slate-400 text-xs uppercase tracking-widest mb-4">Jugador 2</h4>
-                                    
-                                    {step >= 3 && !photoB ? (
-                                        <>
-                                            <div className="bg-fuchsia-50 p-6 rounded-2xl mb-6 text-center min-h-[120px] flex items-center justify-center">
-                                                {challengeB ? <p className="text-fuchsia-900 font-bold text-lg">"{challengeB}"</p> : <p className="text-fuchsia-300">Es tu turno</p>}
-                                            </div>
-                                            <button onClick={()=>generateChallenge(false)} className="w-full py-3 rounded-xl border-2 border-fuchsia-100 text-fuchsia-600 font-bold mb-4 hover:bg-fuchsia-50 transition-colors">GENERAR RETO</button>
-                                            
-                                            {challengeB && (
-                                                <label className="block w-full py-4 bg-fuchsia-600 text-white rounded-xl font-bold text-center cursor-pointer hover:bg-fuchsia-700 transition-colors shadow-lg shadow-fuchsia-200">
-                                                    <Camera className="inline mr-2" size={20}/> CAPTURAR
-                                                    <input type="file" className="hidden" accept="image/*" capture="environment" onChange={(e)=>handleFile(e, false)}/>
-                                                </label>
-                                            )}
-                                        </>
-                                    ) : photoB ? (
-                                        <div className="relative rounded-2xl overflow-hidden">
-                                            <img src={photoB} className="w-full h-48 object-cover"/>
-                                            <div className="absolute bottom-0 w-full bg-black/60 p-2 text-white text-xs text-center backdrop-blur-sm">
-                                                {challengeB}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="h-full flex items-center justify-center text-slate-300">Esperando al Jugador 1...</div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+    }
 
-                        {photoA && photoB && (
-                            <div className="p-6 border-t border-slate-50 bg-white">
-                                <button onClick={handleFinalUpload} disabled={uploading} className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white py-4 rounded-2xl font-bold text-lg shadow-xl hover:scale-[1.01] transition-transform flex justify-center gap-2">
-                                    {uploading ? <Loader2 className="animate-spin"/> : 'COMPARTIR DÚO'}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
+    function playNote(freq, time, duration, gainVal = 0.08) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
 
-        const UploadModal = ({ isOpen, onClose, userId, userName, addToast, replyingTo }) => {
-            const [file, setFile] = useState(null);
-            const [preview, setPreview] = useState(null);
-            const [description, setDescription] = useState('');
-            const [uploading, setUploading] = useState(false);
-            const [activeFilter, setActiveFilter] = useState('normal');
-            const [activeMood, setActiveMood] = useState(null);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, time);
 
-            useEffect(() => { if (!isOpen) { setFile(null); setPreview(null); setDescription(''); setUploading(false); setActiveFilter('normal'); setActiveMood(null); } }, [isOpen]);
+      // Envolvente suave estilo arpa / caja de música
+      gainNode.gain.setValueAtTime(0.0001, time);
+      gainNode.gain.exponentialRampToValueAtTime(gainVal, time + 0.08);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, time + duration);
 
-            const handleFileChange = (e) => {
-                const f = e.target.files[0];
-                if (f) {
-                    // Increased limit to 25MB for initial input
-                    if (f.size > 25 * 1024 * 1024) { addToast("Imagen muy pesada", "error"); return; }
-                    setFile(f);
-                    const r = new FileReader(); r.onloadend = () => setPreview(r.result); r.readAsDataURL(f);
-                }
-            };
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
 
-            const handleUpload = async () => {
-                if (!file) return;
-                setUploading(true);
-                try {
-                    const b64 = await processImage(file, activeFilter);
-                    const payload = {
-                        imageUrl: b64, description: description.trim(), photographerName: userName, photographerId: userId,
-                        likes: [], createdAt: serverTimestamp(), mood: activeMood
-                    };
-                    if (replyingTo) payload.parentId = replyingTo.id;
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'workshop_photos'), payload);
-                    addToast("¡Foto compartida!", "success"); onClose();
-                } catch (error) { console.error(error); addToast("Error al subir (Imagen muy grande para DB).", "error"); } 
-                finally { setUploading(false); }
-            };
+      osc.start(time);
+      osc.stop(time + duration);
+    }
 
-            if (!isOpen) return null;
+    function startWeddingMelody() {
+      if (!audioCtx) initAudio();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
 
-            return (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-[2rem] w-full max-w-md h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-white/50">
-                        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="font-bold text-lg text-slate-800">{replyingTo ? 'Responder' : 'Nueva Captura'}</h3>
-                            <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20}/></button>
-                        </div>
-                        <div className="flex-1 p-6 overflow-y-auto space-y-6">
-                            {replyingTo && <div className="bg-slate-50 p-3 rounded-xl flex gap-3 items-center border border-slate-200"><div className="w-12 h-12 rounded-lg bg-slate-200 overflow-hidden flex-shrink-0"><img src={replyingTo.imageUrl} className="w-full h-full object-cover"/></div><div className="overflow-hidden"><p className="text-xs text-slate-500 font-bold uppercase">Respondiendo a {replyingTo.photographerName}</p></div></div>}
-                            {!preview ? (
-                                <label className="h-56 border-2 border-dashed border-slate-300 hover:border-fuchsia-400 rounded-3xl flex items-center justify-center text-slate-400 flex-col cursor-pointer transition-all bg-slate-50 hover:bg-fuchsia-50/20 group">
-                                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-4 group-hover:scale-110"><Camera size={32} className="text-fuchsia-500"/></div>
-                                    <span className="font-medium">Toca para elegir</span>
-                                    <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                                </label>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="relative group rounded-2xl overflow-hidden shadow-lg border border-slate-100">
-                                        <img src={preview} className="w-full h-auto object-contain" style={{ filter: FILTERS[activeFilter].filter }} />
-                                        <button onClick={()=>{setPreview(null); setFile(null); setActiveFilter('normal');}} className="absolute top-3 right-3 bg-black/50 text-white p-2 rounded-full"><X size={16}/></button>
-                                    </div>
-                                    <div><label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Filtros</label><div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">{Object.entries(FILTERS).map(([key, { name }]) => (<button key={key} onClick={() => setActiveFilter(key)} className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${activeFilter === key ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 border-slate-200'}`}>{name}</button>))}</div></div>
-                                    <div><label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Emoción</label><div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">{MOODS.map((m) => (<button key={m.label} onClick={() => setActiveMood(m)} className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1 ${activeMood?.label === m.label ? m.color + ' ring-2 ring-offset-1 ring-slate-200' : 'bg-white text-slate-500 border-slate-200'}`}><span>{m.emoji}</span> {m.label}</button>))}</div></div>
-                                </div>
-                            )}
-                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="¿Qué te hizo detenerte a mirar esta foto?" className="w-full p-5 bg-slate-50 rounded-2xl h-28 focus:ring-2 focus:ring-fuchsia-500 focus:outline-none transition-all placeholder:text-slate-400 resize-none text-slate-700"/>
-                        </div>
-                        <div className="p-6 border-t border-slate-50 bg-white">
-                            <button onClick={handleUpload} disabled={!file || uploading} className="w-full bg-gradient-to-r from-rose-600 to-fuchsia-600 hover:from-rose-700 hover:to-fuchsia-700 text-white py-4 rounded-2xl font-bold flex justify-center gap-2 shadow-lg transition-all active:scale-[0.98]">
-                                {uploading ? <Loader2 className="animate-spin"/> : <>Compartir <Send size={18}/></>}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
+      // Progresión romántica inspiradora: D - A - Bm - F#m - G - D - G - A
+      const chords = [
+        [293.66, 369.99, 440.00, 587.33], // D Mayor
+        [220.00, 277.18, 329.63, 440.00], // A Mayor
+        [246.94, 293.66, 369.99, 493.88], // B menor
+        [185.00, 220.00, 277.18, 369.99], // F# menor
+        [196.00, 246.94, 293.66, 392.00], // G Mayor
+        [220.00, 277.18, 329.63, 440.00]  // A Mayor
+      ];
 
-        const PhotoCard = React.memo(({ photo, onClick, user, toggleReaction, onReply }) => {
-          // Si es un DÚO, renderizado especial dividido
-          if (photo.type === 'duo') {
-              return (
-                <div onClick={() => onClick(photo)} className="break-inside-avoid bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer mb-5 border border-indigo-100 group hover:-translate-y-1 relative ring-2 ring-indigo-50">
-                    <div className="flex h-48">
-                        <div className="w-1/2 relative border-r border-white">
-                            <img src={photo.imgA} className="w-full h-full object-cover"/>
-                            <div className="absolute bottom-0 w-full bg-black/60 p-1 text-[8px] text-white text-center backdrop-blur-sm truncate">{photo.challengeA}</div>
-                        </div>
-                        <div className="w-1/2 relative">
-                            <img src={photo.imgB} className="w-full h-full object-cover"/>
-                            <div className="absolute bottom-0 w-full bg-black/60 p-1 text-[8px] text-white text-center backdrop-blur-sm truncate">{photo.challengeB}</div>
-                        </div>
-                    </div>
-                    <div className="p-3 bg-gradient-to-r from-indigo-50 to-fuchsia-50">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-[10px] text-indigo-600 font-extrabold uppercase tracking-widest bg-white px-2 py-1 rounded-md shadow-sm">RETO DÚO</span>
-                            <span className="text-[10px] text-slate-400 font-bold">{photo.photographerName}</span>
-                        </div>
-                        {/* REACCIONES EN DÚOS (NUEVO) */}
-                        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-1 pb-1" onClick={e => e.stopPropagation()}>
-                            {REACTION_MAP.map((r) => {
-                                const isSelected = photo[r.field]?.includes(user.uid);
-                                const count = photo[r.field]?.length || 0;
-                                return <button key={r.icon} onClick={() => toggleReaction(photo, r)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs transition-all border font-medium ${isSelected ? r.color : 'text-slate-400 border-slate-100 bg-white hover:bg-slate-50'}`}><span className="text-sm transform transition-transform active:scale-125">{r.icon}</span> {count > 0 && <span>{count}</span>}</button>;
-                            })}
-                        </div>
-                    </div>
-                </div>
-              );
-          }
+      let chordIndex = 0;
 
-          // Renderizado normal
-          return (
-            <div onClick={() => onClick(photo)} className="break-inside-avoid bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer mb-5 border border-slate-100 group hover:-translate-y-1 relative">
-              <div className="relative aspect-auto bg-slate-100 overflow-hidden">
-                <img src={photo.imageUrl} className="w-full h-auto block transition-transform duration-700 group-hover:scale-105" loading="lazy" />
-                {photo.mood && <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm backdrop-blur-md ${photo.mood.color}`}>{photo.mood.emoji} {photo.mood.label}</div>}
-                {photo.parentId && <div className="absolute top-3 right-3 bg-black/50 text-white px-2 py-1 rounded-md text-[10px] backdrop-blur-md flex items-center gap-1"><Reply size={10} /> Respuesta</div>}
-              </div>
-              <div className="p-4">
-                <p className="text-slate-700 text-sm mb-3 font-medium leading-relaxed">"{photo.description}"</p>
-                <div className="flex justify-between items-center mb-4">
-                   <span className="text-[10px] text-fuchsia-600 font-extrabold uppercase tracking-widest bg-fuchsia-50 px-2 py-1 rounded-md">{photo.photographerName}</span>
-                   <button onClick={(e) => { e.stopPropagation(); onReply(photo); }} className="text-slate-400 hover:text-fuchsia-600 p-1.5 hover:bg-fuchsia-50 rounded-full transition-colors"><Reply size={16} /></button>
-                </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-1 pb-1" onClick={e => e.stopPropagation()}>
-                    {REACTION_MAP.map((r) => {
-                        const isSelected = photo[r.field]?.includes(user.uid);
-                        const count = photo[r.field]?.length || 0;
-                        return (
-                            <button key={r.icon} onClick={() => toggleReaction(photo, r)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs transition-all border font-medium ${isSelected ? r.color : 'text-slate-400 border-slate-100 bg-slate-50 hover:bg-white'}`}>
-                                <span className="text-sm transform transition-transform active:scale-125">{r.icon}</span> {count > 0 && <span>{count}</span>}
-                            </button>
-                        );
-                    })}
-                </div>
-              </div>
-            </div>
-          );
-        }, (prev, next) => prev.photo.id === next.photo.id && REACTION_MAP.every(r => (prev.photo[r.field]?.length || 0) === (next.photo[r.field]?.length || 0) && prev.photo[r.field]?.includes(prev.user.uid) === next.photo[r.field]?.includes(next.user.uid)));
+      function triggerArpeggio() {
+        if (!isPlaying) return;
+        const now = audioCtx.currentTime;
+        const currentChord = chords[chordIndex % chords.length];
 
-        const ImageViewerModal = ({ photo, user, onClose, onDelete, toggleReaction }) => {
-            if (!photo) return null;
-            
-            // Renderizado especial para DÚOS en pantalla completa
-            if (photo.type === 'duo') {
-                return (
-                    <div className="fixed inset-0 z-[90] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-                        <button onClick={onClose} className="absolute top-6 right-6 text-white/50 hover:text-white p-2 z-50"><X size={24}/></button>
-                        {user.uid === photo.photographerId && <button onClick={(e)=>{e.stopPropagation(); onDelete(photo.id)}} className="absolute top-6 left-6 text-white/50 hover:text-red-400 p-2 z-50"><Trash2 size={24}/></button>}
-                        
-                        <div className="w-full max-w-6xl h-full flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
-                            <div className="flex flex-col md:flex-row gap-4 w-full h-[60vh] md:h-[70vh]">
-                                <div className="flex-1 relative bg-black rounded-2xl overflow-hidden shadow-2xl group">
-                                    <img src={photo.imgA} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"/>
-                                    <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/80 to-transparent p-6 pt-20">
-                                        <p className="text-white text-lg font-bold text-center">"{photo.challengeA}"</p>
-                                        <p className="text-slate-400 text-xs text-center mt-1 uppercase tracking-widest">Jugador 1</p>
-                                    </div>
-                                </div>
-                                <div className="flex-1 relative bg-black rounded-2xl overflow-hidden shadow-2xl group">
-                                    <img src={photo.imgB} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"/>
-                                    <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/80 to-transparent p-6 pt-20">
-                                        <p className="text-white text-lg font-bold text-center">"{photo.challengeB}"</p>
-                                        <p className="text-slate-400 text-xs text-center mt-1 uppercase tracking-widest">Jugador 2</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="mt-8 text-center">
-                                <div className="flex items-center justify-center gap-4 bg-white/10 px-8 py-3 rounded-full backdrop-blur-md border border-white/10 shadow-lg mb-4">
-                                    {REACTION_MAP.map((r) => {
-                                        const isSelected = photo[r.field]?.includes(user.uid);
-                                        const count = photo[r.field]?.length || 0;
-                                        return <button key={r.icon} onClick={() => toggleReaction(photo, r)} className={`flex flex-col items-center gap-1 ${isSelected ? 'opacity-100 scale-110' : 'opacity-40 hover:opacity-100'}`}><span className="text-3xl">{r.icon}</span>{count > 0 && <span className="text-[10px] font-bold text-white">{count}</span>}</button>;
-                                    })}
-                                </div>
-                                <span className="bg-indigo-500/20 text-indigo-200 border border-indigo-500/50 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest inline-block">Reto Completado por {photo.photographerName}</span>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
+        currentChord.forEach((note, idx) => {
+          playNote(note, now + (idx * 0.45), 2.4, 0.07);
+        });
 
-            return (
-                <div className="fixed inset-0 z-[90] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-                    <button onClick={onClose} className="absolute top-6 right-6 text-white/50 hover:text-white p-2 z-50"><X size={24}/></button>
-                    {user.uid === photo.photographerId && <button onClick={(e)=>{e.stopPropagation(); onDelete(photo.id)}} className="absolute top-6 left-6 text-white/50 hover:text-red-400 p-2 z-50"><Trash2 size={24}/></button>}
-                    <div className="relative w-full max-w-5xl max-h-screen flex flex-col items-center justify-center h-full py-8" onClick={e => e.stopPropagation()}>
-                        <div className="relative shadow-2xl rounded-lg overflow-hidden bg-black max-h-[75vh]"><img src={photo.imageUrl} className="max-w-full max-h-[75vh] object-contain" /></div>
-                        <div className="w-full mt-8 text-white text-center max-w-2xl mx-auto">
-                            {photo.mood && <span className={`inline-block mb-4 px-3 py-1 rounded-full text-xs font-bold ${photo.mood.color}`}>{photo.mood.emoji} {photo.mood.label}</span>}
-                            <p className="text-xl font-medium text-slate-200 mb-6">"{photo.description}"</p>
-                            <div className="flex items-center justify-center gap-4 bg-white/10 px-8 py-3 rounded-full backdrop-blur-md border border-white/10 shadow-lg">
-                                {REACTION_MAP.map((r) => {
-                                    const isSelected = photo[r.field]?.includes(user.uid);
-                                    const count = photo[r.field]?.length || 0;
-                                    return <button key={r.icon} onClick={() => toggleReaction(photo, r)} className={`flex flex-col items-center gap-1 ${isSelected ? 'opacity-100 scale-110' : 'opacity-40 hover:opacity-100'}`}><span className="text-3xl">{r.icon}</span>{count > 0 && <span className="text-[10px] font-bold text-white">{count}</span>}</button>;
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
+        chordIndex++;
+      }
 
-        const App = () => {
-            const [user, setUser] = useState(null);
-            const [hasEntered, setHasEntered] = useState(false);
-            const [toasts, setToasts] = useState([]);
-            const [photos, setPhotos] = useState([]);
-            const [config, setConfig] = useState({ title: 'Mirada Terapéutica', subtitle: 'Bienvenido' });
-            const [showUpload, setShowUpload] = useState(false);
-            const [showDuoUpload, setShowDuoUpload] = useState(false);
-            const [showConfig, setShowConfig] = useState(false);
-            const [showRules, setShowRules] = useState(false);
-            const [showQR, setShowQR] = useState(false); 
-            const [showInspiration, setShowInspiration] = useState(false);
-            const [viewerPhotoId, setViewerPhotoId] = useState(null);
-            const [replyingTo, setReplyingTo] = useState(null);
-            
-            const addToast = (msg, type='info') => { const id = Date.now(); setToasts(p => [...p, {id, message: msg, type}]); setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3000); };
+      triggerArpeggio();
+      melodyInterval = setInterval(triggerArpeggio, 2200);
+    }
 
-            useEffect(() => {
-                const initAuth = async () => {
-                    if (initialAuthToken) try { await signInWithCustomToken(auth, initialAuthToken); } catch (e) { await signInAnonymously(auth); }
-                    else await signInAnonymously(auth);
-                };
-                initAuth();
-                return onAuthStateChanged(auth, u => setUser(u));
-            }, []);
+    function toggleAudio() {
+      const iconOn = document.getElementById('musicIconOn');
+      const iconOff = document.getElementById('musicIconOff');
+      const btn = document.getElementById('musicToggleBtn');
 
-            useEffect(() => {
-                if (!user) return;
-                const unsubPhotos = onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'workshop_photos'), orderBy('createdAt', 'desc')), s => setPhotos(s.docs.map(d => ({id: d.id, ...d.data()}))), err => console.error(err));
-                const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'app_settings', 'theme'), s => { if(s.exists()) setConfig(prev => ({...prev, ...s.data()})); });
-                return () => { unsubPhotos(); unsubConfig(); };
-            }, [user]);
+      if (!isPlaying) {
+        initAudio();
+        isPlaying = true;
+        startWeddingMelody();
+        iconOn.classList.remove('hidden');
+        iconOff.classList.add('hidden');
+        btn.classList.add('music-playing', 'border-gold-500', 'bg-gold-50');
+        showToast('Música ambiental iniciada 🎵');
+      } else {
+        isPlaying = false;
+        clearInterval(melodyInterval);
+        iconOn.classList.add('hidden');
+        iconOff.classList.remove('hidden');
+        btn.classList.remove('music-playing', 'border-gold-500', 'bg-gold-50');
+        showToast('Música pausada');
+      }
+    }
 
-            const toggleReaction = async (photo, reactionType) => {
-                if(!user) return;
-                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'workshop_photos', photo.id);
-                const fieldName = reactionType.field;
-                const liked = photo[fieldName]?.includes(user.uid);
-                const updateData = {}; updateData[fieldName] = liked ? arrayRemove(user.uid) : arrayUnion(user.uid);
-                await updateDoc(ref, updateData);
-            };
+    /* ========================================================
+       3. AGREGAR AL CALENDARIO DE GOOGLE O DESCARGAR EVENTO
+       ======================================================== */
+    function addToCalendar() {
+      const title = encodeURIComponent("Boda de Novia & Novio");
+      const details = encodeURIComponent("¡Acompáñanos a celebrar nuestra boda! Ceremonia en Parroquia de San Andrés y Recepción en Salón Ranchito.");
+      const location = encodeURIComponent("Parroquia de San Andrés / Salón Ranchito");
+      // Fechas en formato ISO UTC: 15 de agosto 2026, 17:00 a 02:00 del día siguiente
+      const dates = "20260815T230000Z/20260816T080000Z";
 
-            const deletePhoto = async (id) => { if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'workshop_photos', id)); setViewerPhotoId(null); addToast("Eliminado", "success"); } };
+      const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
+      window.open(googleCalUrl, '_blank');
+      showToast("Abriendo calendario de Google...");
+    }
 
-            const handleReply = (photo) => { setReplyingTo(photo); setShowUpload(true); };
-            const currentPhoto = photos.find(p => p.id === viewerPhotoId);
+    /* ========================================================
+       4. COPIAR DATOS BANCARIOS (Portapapeles Seguro)
+       ======================================================== */
+    function copyToClipboard(text, successMsg) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(successMsg);
+        }).catch(() => {
+          fallbackCopyText(text, successMsg);
+        });
+      } else {
+        fallbackCopyText(text, successMsg);
+      }
+    }
 
-            if (!user) return <div className="h-screen flex items-center justify-center bg-slate-50 text-fuchsia-500"><Loader2 className="animate-spin" size={40}/></div>;
+    function fallbackCopyText(text, successMsg) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast(successMsg);
+      } catch (err) {
+        showToast('No se pudo copiar automáticamente');
+      }
+      document.body.removeChild(textArea);
+    }
 
-            return (
-                <div className="min-h-screen relative font-sans text-slate-800">
-                    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-                        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-rose-200/30 blur-3xl opacity-50 mix-blend-multiply animate-pulse"></div>
-                        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-fuchsia-200/30 blur-3xl opacity-50 mix-blend-multiply"></div>
-                        <div className="absolute top-[40%] left-[30%] w-[40%] h-[40%] rounded-full bg-slate-200/40 blur-3xl opacity-40 mix-blend-multiply"></div>
-                        <div className="absolute inset-0 transition-all duration-700" style={{ backgroundImage: config.backgroundUrl ? `url(${config.backgroundUrl})` : 'none', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundSize: '50%', opacity: 0.08, filter: 'grayscale(100%)' }} />
-                    </div>
-                    <ToastContainer toasts={toasts} />
-                    {!hasEntered ? (
-                        <LoginScreen onLogin={() => setHasEntered(true)} addToast={addToast} config={config} currentUser={user} onShowRules={() => setShowRules(true)} />
-                    ) : (
-                        <>
-                            <header className="fixed top-0 inset-x-0 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 z-40 px-4 py-3 flex justify-between items-center shadow-sm transition-all">
-                                <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
-                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-600 to-fuchsia-600 flex items-center justify-center text-white flex-shrink-0 shadow-lg shadow-rose-500/20"><Camera size={18}/></div>
-                                    <h1 className="font-bold text-slate-800 truncate text-lg tracking-tight">{config.title}</h1>
-                                </div>
-                                <div className="flex gap-2 flex-shrink-0">
-                                    <button onClick={()=>setShowInspiration(true)} className="p-2.5 hover:bg-slate-100 rounded-xl text-amber-500 hover:text-amber-700 transition-colors" title="Inspiración"><Lightbulb size={20}/></button>
-                                    <div className="w-px h-6 bg-slate-200 my-auto mx-1"></div>
-                                    <button onClick={()=>setShowQR(true)} className="p-2.5 hover:bg-slate-100 rounded-xl text-slate-600 hover:text-slate-900 transition-colors"><QrCode size={20}/></button>
-                                    <button onClick={()=>setShowConfig(true)} className="p-2.5 hover:bg-slate-100 rounded-xl text-slate-600 hover:text-slate-900 transition-colors"><Settings size={20}/></button>
-                                    <button 
-                                        onClick={() => {
-                                            if(confirm("¿Salir de la sesión?")) {
-                                                window.location.reload();
-                                            }
-                                        }} 
-                                        className="p-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors ml-1" 
-                                        title="Salir"
-                                    >
-                                        <LogOut size={20}/>
-                                    </button>
-                                </div>
-                            </header>
-                            <main className="pt-24 pb-32 px-4 max-w-7xl mx-auto">
-                                {photos.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-32 text-slate-300">
-                                        <div className="bg-slate-100 p-6 rounded-full mb-4"><ImageIcon size={48} className="text-slate-300"/></div>
-                                        <p className="text-lg font-medium text-slate-400">Aún no hay momentos capturados.</p>
-                                    </div>
-                                ) : (
-                                    <div className="columns-2 md:columns-3 lg:columns-4 gap-5 space-y-5">
-                                        {photos.map(p => ( 
-                                            <PhotoCard key={p.id} photo={p} user={user} onClick={() => setViewerPhotoId(p.id)} toggleReaction={toggleReaction} onReply={handleReply} /> 
-                                        ))}
-                                    </div>
-                                )}
-                            </main>
-                            <Stopwatch />
-                            
-                            {/* FAB GROUP */}
-                            <div className="fixed bottom-8 right-8 z-40 flex flex-col gap-4 items-end">
-                                <button onClick={()=>setShowDuoUpload(true)} className="bg-white hover:bg-indigo-50 text-indigo-600 p-4 rounded-2xl shadow-xl shadow-indigo-900/10 flex items-center gap-3 hover:scale-105 transition-all duration-300 border border-indigo-100 group">
-                                    <span className="font-bold text-xs tracking-wide mr-1">Modo Dúo</span> <Users size={22} className="group-hover:rotate-12 transition-transform"/>
-                                </button>
-                                <button onClick={() => { setReplyingTo(null); setShowUpload(true); }} className="bg-slate-900 hover:bg-black text-white p-5 rounded-2xl shadow-2xl shadow-slate-900/30 flex items-center gap-3 hover:scale-105 transition-all duration-300 border border-slate-700/50 group">
-                                    <Camera size={24} className="group-hover:rotate-12 transition-transform"/> <span className="font-bold text-sm tracking-wide">Capturar</span>
-                                </button>
-                            </div>
-                            
-                            <UploadModal isOpen={showUpload} onClose={() => { setShowUpload(false); setReplyingTo(null); }} userId={user.uid} userName={user.displayName} addToast={addToast} replyingTo={replyingTo} />
-                            <DuoUploadModal isOpen={showDuoUpload} onClose={()=>setShowDuoUpload(false)} userId={user.uid} userName={user.displayName} addToast={addToast} />
-                            
-                            {currentPhoto && (
-                                <ImageViewerModal photo={currentPhoto} user={user} onClose={() => setViewerPhotoId(null)} onDelete={deletePhoto} toggleReaction={toggleReaction} />
-                            )}
-                            {showQR && ( <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowQR(false)}> <div className="bg-white p-8 rounded-[2rem] max-w-sm w-full text-center shadow-2xl border border-white/20" onClick={e => e.stopPropagation()}> <h3 className="font-bold text-2xl mb-6 text-slate-800">Escanea para entrar</h3> <div className="bg-white p-4 border-2 border-dashed border-slate-200 rounded-3xl inline-block mb-8 shadow-sm"> <img src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.href)}`} alt="QR" className="w-56 h-56 mix-blend-multiply" /> </div> <button onClick={() => setShowQR(false)} className="w-full py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm flex items-center justify-center gap-2 transition-colors">Cerrar</button> </div> </div> )}
-                            <ConfigModal isOpen={showConfig} onClose={()=>setShowConfig(false)} addToast={addToast} currentConfig={config} />
-                            <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
-                            <InspirationModal isOpen={showInspiration} onClose={() => setShowInspiration(false)} />
-                        </>
-                    )}
-                </div>
-            );
-        };
+    /* ========================================================
+       5. FORMULARIO RSVP -> WHATSAPP
+       ======================================================== */
+    function toggleGuestCount(val) {
+      const wrapper = document.getElementById('guestCountWrapper');
+      if (val === 'no') {
+        wrapper.classList.add('opacity-40', 'pointer-events-none');
+      } else {
+        wrapper.classList.remove('opacity-40', 'pointer-events-none');
+      }
+    }
 
-        const root = createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+    function handleRsvpSubmit(event) {
+      event.preventDefault();
+      
+      const name = document.getElementById('guestName').value.trim();
+      const attendance = document.getElementById('guestAttendance').value;
+      const count = document.getElementById('guestCount').value;
+      const message = document.getElementById('guestMessage').value.trim();
+
+      // Número telefónico de destino (puedes reemplazarlo por el tuyo)
+      const phoneNumber = "5210000000000";
+
+      let text = `💍 *CONFIRMACIÓN DE ASISTENCIA - BODA*\n\n`;
+      text += `👤 *Invitado(s):* ${name}\n`;
+      
+      if (attendance === 'si') {
+        text += `✅ *Asistencia:* ¡Sí asistiré con mucho gusto!\n`;
+        text += `👥 *Número de asistentes:* ${count}\n`;
+      } else {
+        text += `❌ *Asistencia:* Lo lamento, no podré asistir.\n`;
+      }
+
+      if (message) {
+        text += `💌 *Mensaje:* "${message}"\n`;
+      }
+
+      text += `\n¡Gracias! ✨`;
+
+      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(text)}`;
+      window.open(whatsappUrl, '_blank');
+      showToast('Enviando confirmación por WhatsApp...');
+    }
+
+    /* ========================================================
+       6. SISTEMA DE NOTIFICACIONES TOAST (Libre de alert())
+       ======================================================== */
+    let toastTimeout = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toastNotification');
+      const toastMessage = document.getElementById('toastMessage');
+      
+      toastMessage.textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 3200);
+    }
+  </script>
 </body>
 </html>
